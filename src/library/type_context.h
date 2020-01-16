@@ -20,6 +20,24 @@ Author: Leonardo de Moura
 #include "library/unification_hint.h"
 
 namespace lean {
+
+mutex SynthMutex;
+
+struct SynthData1 {
+  unsigned n_steps;
+  unsigned max_depth;
+  unsigned n_local_instances;
+  bool success;
+};
+
+struct SynthDatapoint {
+  std::string goal, loc;
+  SynthData1 orig;
+  SynthData1 ablate;
+};
+
+std::vector<SynthDatapoint> synth_datapoints;
+
 /* Return `f._sunfold` */
 name mk_smart_unfolding_name_for(name const & f);
 
