@@ -4149,14 +4149,14 @@ optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
   synth_datapoint.answer_size = static_cast<bool>(answer) ? expr_to_string(*answer).length() : 0;
 
   // So we don't bother on the extremely cheap queries
-  unsigned MIN_US = 1000;
+  unsigned MIN_US = 5000;
   if (answer && !empty(m_local_instances) && synth_datapoint.orig_us > MIN_US) {
       try {
-
           unsigned prev_n_local_instances = length(m_local_instances);
-          type_context_old tctx(env(), mctx(), lctx(), get_cache(), m_transparency_mode);
+          local_context lctx_cp = lctx();
+          lctx_cp.unfreeze_local_instances();
+          type_context_old tctx(env(), mctx(), lctx_cp, get_cache(), m_transparency_mode);
 
-          std::cerr << "START: " << prev_n_local_instances << std::endl;
           // TODO(dselsam): investigate frozen
           while (!tctx.lctx().empty() && tctx.n_local_instances()) {
               while (!tctx.lctx().empty() && tctx.n_local_instances() == prev_n_local_instances) { tctx.pop_local(); }
@@ -4165,7 +4165,6 @@ optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
                   break;
               }
               prev_n_local_instances = tctx.n_local_instances();
-              std::cerr << "STEP: " << prev_n_local_instances << std::endl;
               start = std::chrono::steady_clock::now();
               optional<expr> answer = tctx.mk_class_instance_core(type_0);
               if (!answer) {
