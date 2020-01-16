@@ -763,7 +763,7 @@ int main(int argc, char ** argv) {
         }
 
         for (auto dp : synth_datapoints) {
-            std::cerr << dp.goal_pfix << ", " << dp.goal_size << ", " << dp.answer_size << ", " << dp.orig_us << ", " << dp.ablate_us << std::endl;
+            std::cerr << "\"" << dp.goal_pfix << "\", " << dp.goal_size << ", " << dp.answer_size << ", " << dp.orig_us << ", " << dp.ablate_us << std::endl;
         }
         return ((ok && !get(has_errors(lt.get_root()))) || test_suite) ? 0 : 1;
     } catch (lean::throwable & ex) {

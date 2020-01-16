@@ -4139,7 +4139,7 @@ optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
   // Compute goal string
   std::string goal = expr_to_string(type_0);
   synth_datapoint.goal_size = goal.length();
-  synth_datapoint.goal_pfix = "\"" + escape_json(goal.substr(0, 500)) + "\"";
+  synth_datapoint.goal_pfix = escape_json(goal.substr(0, 500));
 
   // Time the original query
   start = std::chrono::steady_clock::now();
