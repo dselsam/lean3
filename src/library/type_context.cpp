@@ -4169,6 +4169,7 @@ optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
               optional<expr> answer = tctx.mk_class_instance_core(type_0);
               if (!answer) {
                   synth_datapoint.ablate_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+                  break;
               }
           }
 
