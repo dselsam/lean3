@@ -4148,6 +4148,7 @@ optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
   synth_datapoint.ablate_us = 0;
   synth_datapoint.answer_size = static_cast<bool>(answer) ? expr_to_string(*answer).length() : 0;
 
+  /*
   // So we don't bother on the extremely cheap queries
   unsigned MIN_US = 5000;
   if (answer && !empty(m_local_instances) && synth_datapoint.orig_us > MIN_US) {
@@ -4175,7 +4176,7 @@ optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
 
       } catch (exception &) { }
   }
-
+  */
   {
       lock_guard<mutex> guard(synth_datapoints_mutex);
       synth_datapoints.push_back(synth_datapoint);
