@@ -682,8 +682,36 @@ static expr elaborate_proof(
         bool is_rfl_lemma, expr const & final_type,
         metavar_context const & mctx, local_context const & lctx,
         parser_pos_provider pos_provider, bool use_info_manager, std::string const & file_name) {
-  // [DHS] to speed up the experiments, don't bother elaborating proofs.
-  return mk_sorry(final_type, true);
+    auto tc = std::make_shared<type_context_old>(decl_env, opts, mctx, lctx);
+    scope_trace_env scope2(decl_env, opts, *tc);
+    scope_traces_as_messages scope2a(file_name, header_pos);
+    scope_pos_info_provider scope3(pos_provider);
+    auto_reporting_info_manager_scope scope4(file_name, use_info_manager);
+
+    try {
+        bool recover_from_errors = true;
+        elaborator elab(decl_env, opts, get_namespace(decl_env) + mlocal_pp_name(fn), mctx, lctx, recover_from_errors);
+
+        expr val, type;
+        {
+            time_task _("elaboration", message_builder(tc, decl_env, get_global_ios(), file_name, header_pos, INFORMATION),
+                        opts, mlocal_pp_name(fn));
+            std::tie(val, type) = elab.elaborate_with_type(val0, mk_as_is(mlocal_type(fn)));
+        }
+
+        if (is_equations_result(val))
+            val = get_equations_result(val, 0);
+        buffer<expr> params; for (auto & e : params_list) params.push_back(e);
+        finalize_theorem_proof(elab, params, val, finfo);
+        if (is_rfl_lemma && !lean::is_rfl_lemma(final_type, val))
+            throw exception("not a rfl-lemma, even though marked as rfl");
+        return inline_new_defs(decl_env, elab.env(), mlocal_pp_name(fn), val);
+    } catch (exception & ex) {
+        /* Remark: we need the catch to be able to produce correct line information */
+        message_builder(tc, decl_env, get_global_ios(), file_name, header_pos, ERROR)
+            .set_exception(ex).report();
+        return mk_sorry(final_type, true);
+    }
 }
 
 static void check_example(environment const & decl_env, options const & opts,
