@@ -163,6 +163,11 @@ int getopt_long(int argc, char *in_argv[], const char *optstring, const option *
 }
 #endif
 
+namespace lean {
+    extern mutex synth_datapoints_mutex;
+    extern std::vector<SynthDatapoint> synth_datapoints;
+}
+
 using namespace lean; // NOLINT
 
 #ifndef LEAN_SERVER_DEFAULT_MAX_MEMORY
@@ -757,6 +762,9 @@ int main(int argc, char ** argv) {
             gen_doc(env, opts, out);
         }
 
+        for (auto dp : synth_datapoints) {
+            std::cerr << "\"" << dp.goal << "\", " << dp.n_ms.count() << ", " << dp.n_local_insts << ", " << dp.answer_size << std::endl;
+        }
         return ((ok && !get(has_errors(lt.get_root()))) || test_suite) ? 0 : 1;
     } catch (lean::throwable & ex) {
         lean::message_builder(env, ios, "<unknown>", lean::pos_info(1, 1), lean::ERROR).set_exception(ex).report();

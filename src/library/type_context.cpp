@@ -4,6 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author: Leonardo de Moura
 */
+#include <sstream>
+#include <iomanip>
+#include <chrono>
 #include <algorithm>
 #include "util/flet.h"
 #include "util/interrupt.h"
@@ -35,6 +38,23 @@ Author: Leonardo de Moura
 #include "library/check.h"
 
 namespace lean {
+
+mutex synth_datapoints_mutex;
+std::vector<SynthDatapoint> synth_datapoints;
+
+std::string escape_json(const std::string &s) {
+    std::ostringstream o;
+    for (auto c = s.cbegin(); c != s.cend(); c++) {
+        if (*c == '"' || *c == '\\' || ('\x00' <= *c && *c <= '\x1f')) {
+            o << "\\u"
+              << std::hex << std::setw(4) << std::setfill('0') << (int)*c;
+        } else {
+            o << *c;
+        }
+    }
+    return o.str();
+}
+
 bool is_at_least_semireducible(transparency_mode m) {
     return m == transparency_mode::All || m == transparency_mode::Semireducible;
 }
@@ -4062,7 +4082,7 @@ static void instantiate_replacements(type_context_old & ctx,
     }
 }
 
-optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
+optional<expr> type_context_old::mk_class_instance_core(expr const & type_0) {
     expr type = instantiate_mvars(type_0);
     scope S(*this);
     optional<expr> result;
@@ -4104,6 +4124,31 @@ optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
         S.commit();
     }
     return result;
+}
+
+static std::string expr_to_string(expr const & e) {
+  std::ostringstream os;
+  os << e;
+  return os.str();
+}
+
+optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
+  SynthDatapoint synth_datapoint;
+  synth_datapoint.goal = escape_json(expr_to_string(type_0));
+  std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+  optional<expr> answer = mk_class_instance_core(type_0);
+  synth_datapoint.n_ms = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now( ) - start );
+  synth_datapoint.n_local_insts = length(m_local_instances);
+  if (answer) {
+      synth_datapoint.answer_size = expr_to_string(type_0).length();
+  } else {
+      synth_datapoint.answer_size = 0;
+  }
+  {
+      lock_guard<mutex> guard(synth_datapoints_mutex);
+      synth_datapoints.push_back(synth_datapoint);
+  }
+  return answer;
 }
 
 optional<expr> type_context_old::mk_subsingleton_instance(expr const & type) {

@@ -6,6 +6,7 @@ Author: Leonardo de Moura
 */
 #pragma once
 #include <vector>
+#include <chrono>
 #include <algorithm>
 #include "util/flet.h"
 #include "util/lbool.h"
@@ -21,22 +22,12 @@ Author: Leonardo de Moura
 
 namespace lean {
 
-mutex SynthMutex;
-
-struct SynthData1 {
-  unsigned n_steps;
-  unsigned max_depth;
-  unsigned n_local_instances;
-  bool success;
-};
-
 struct SynthDatapoint {
-  std::string goal, loc;
-  SynthData1 orig;
-  SynthData1 ablate;
+    std::string goal;
+    std::chrono::milliseconds n_ms;
+    unsigned n_local_insts;
+    unsigned answer_size;
 };
-
-std::vector<SynthDatapoint> synth_datapoints;
 
 /* Return `f._sunfold` */
 name mk_smart_unfolding_name_for(name const & f);
@@ -754,6 +745,7 @@ public:
 
     optional<name> is_class(expr const & type);
     optional<expr> mk_class_instance(expr const & type);
+    optional<expr> mk_class_instance_core(expr const & type);
     optional<expr> mk_subsingleton_instance(expr const & type);
     /* Create type class instance in a different local context */
     optional<expr> mk_class_instance_at(local_context const & lctx, expr const & type);
