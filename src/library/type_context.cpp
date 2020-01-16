@@ -4134,16 +4134,48 @@ static std::string expr_to_string(expr const & e) {
 
 optional<expr> type_context_old::mk_class_instance(expr const & type_0) {
   SynthDatapoint synth_datapoint;
-  synth_datapoint.goal = escape_json(expr_to_string(type_0));
-  std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+  std::chrono::steady_clock::time_point start;
+
+  // Compute goal string
+  std::string goal = expr_to_string(type_0);
+  synth_datapoint.goal_size = goal.length();
+  synth_datapoint.goal_pfix = "\"" + escape_json(goal.substr(0, 500)) + "\"";
+
+  // Time the original query
+  start = std::chrono::steady_clock::now();
   optional<expr> answer = mk_class_instance_core(type_0);
-  synth_datapoint.n_ms = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now( ) - start );
-  synth_datapoint.n_local_insts = length(m_local_instances);
-  if (answer) {
-      synth_datapoint.answer_size = expr_to_string(type_0).length();
-  } else {
-      synth_datapoint.answer_size = 0;
+  synth_datapoint.orig_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+  synth_datapoint.ablate_us = 0;
+  synth_datapoint.answer_size = static_cast<bool>(answer) ? expr_to_string(*answer).length() : 0;
+
+  // So we don't bother on the extremely cheap queries
+  unsigned MIN_US = 1000;
+  if (answer && !empty(m_local_instances) && synth_datapoint.orig_us > MIN_US) {
+      try {
+
+          unsigned prev_n_local_instances = length(m_local_instances);
+          type_context_old tctx(env(), mctx(), lctx(), get_cache(), m_transparency_mode);
+
+          std::cerr << "START: " << prev_n_local_instances << std::endl;
+          // TODO(dselsam): investigate frozen
+          while (!tctx.lctx().empty() && tctx.n_local_instances()) {
+              while (!tctx.lctx().empty() && tctx.n_local_instances() == prev_n_local_instances) { tctx.pop_local(); }
+              if (tctx.n_local_instances() == prev_n_local_instances) {
+                  std::cerr << "FAIL" << std::endl;
+                  break;
+              }
+              prev_n_local_instances = tctx.n_local_instances();
+              std::cerr << "STEP: " << prev_n_local_instances << std::endl;
+              start = std::chrono::steady_clock::now();
+              optional<expr> answer = tctx.mk_class_instance_core(type_0);
+              if (!answer) {
+                  synth_datapoint.ablate_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+              }
+          }
+
+      } catch (exception &) { }
   }
+
   {
       lock_guard<mutex> guard(synth_datapoints_mutex);
       synth_datapoints.push_back(synth_datapoint);

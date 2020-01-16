@@ -23,10 +23,12 @@ Author: Leonardo de Moura
 namespace lean {
 
 struct SynthDatapoint {
-    std::string goal;
-    std::chrono::milliseconds n_ms;
-    unsigned n_local_insts;
+    std::string goal_pfix;
+    unsigned goal_size;
     unsigned answer_size;
+
+    unsigned orig_us;
+    unsigned ablate_us;
 };
 
 /* Return `f._sunfold` */
@@ -630,6 +632,9 @@ public:
        add tactic `unfreeze_local_instances : tactic unit` which unfreezes the set of frozen local instances
        for the current goal. */
     void freeze_local_instances();
+
+    // [DHS]
+    unsigned n_local_instances() const { return length(m_local_instances); }
 
     bool is_def_eq(level const & l1, level const & l2);
     virtual expr whnf(expr const & e) override;
