@@ -40,6 +40,7 @@ Author: Leonardo de Moura
 #include "library/export.h"
 #include "library/message_builder.h"
 #include "library/time_task.h"
+#include "library/library_task_builder.h"
 #include "frontends/lean/parser.h"
 #include "frontends/lean/pp.h"
 #include "frontends/lean/dependencies.h"
@@ -755,17 +756,22 @@ int main(int argc, char ** argv) {
         if (tlean_mode) {
             // TODO: multithread this!
             for (auto & mod : mods) {
-	      std::cout << "MOD" << mod.m_id << std::endl;
-                auto res = get(mod.m_mod_info->m_result);
-                auto tlean_fn = tlean_of_lean(mod.m_id);
-                exclusive_file_lock output_lock(tlean_fn);
-                std::ofstream out(tlean_fn);
-                write_module_tlean(*res.m_loaded_module, out);
-                out.close();
-                if (!out) throw exception("failed to write tlean file");
+	      add_library_task(task_builder<unit>([mod] { 
+		      std::cout << "[TLEAN] " << mod.m_id << std::endl;
+		      auto res = get(mod.m_mod_info->m_result);
+		      auto tlean_fn = tlean_of_lean(mod.m_id);
+		      exclusive_file_lock output_lock(tlean_fn);
+		      std::ofstream out(tlean_fn);
+		      write_module_tlean(*res.m_loaded_module, out);
+		      out.close();
+		      if (!out) throw exception("failed to write tlean file");
+		      return unit();
+		    }), std::string("saving tlean"));
             }
         }
 
+        taskq().wait_for_finish(lt.get_root().wait_for_finish());
+	
         if (export_txt && !mods.empty()) {
             buffer<std::shared_ptr<module_info const>> mod_infos;
             for (auto & mod : mods) mod_infos.push_back(mod.m_mod_info);
