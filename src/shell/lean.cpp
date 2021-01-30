@@ -754,17 +754,15 @@ int main(int argc, char ** argv) {
         // }
 
         if (tlean_mode) {
-            // TODO: multithread this!
             for (auto & mod : mods) {
-	      add_library_task(task_builder<unit>([mod] { 
-		      std::cout << "[TLEAN] " << mod.m_id << std::endl;
-		      auto res = get(mod.m_mod_info->m_result);
-		      auto tlean_fn = tlean_of_lean(mod.m_id);
-		      exclusive_file_lock output_lock(tlean_fn);
-		      std::ofstream out(tlean_fn);
-		      write_module_tlean(*res.m_loaded_module, out);
-		      out.close();
-		      if (!out) throw exception("failed to write tlean file");
+	        add_library_task(task_builder<unit>([mod] { 
+		    auto res = get(mod.m_mod_info->m_result);
+		    auto tlean_fn = tlean_of_lean(mod.m_id);
+		    exclusive_file_lock output_lock(tlean_fn);
+		    std::ofstream out(tlean_fn);
+		    write_module_tlean(*res.m_loaded_module, out);
+		    out.close();
+		    if (!out) throw exception("failed to write tlean file");
 		      return unit();
 		    }), std::string("saving tlean"));
             }
