@@ -202,6 +202,7 @@ static void display_help(std::ostream & out) {
     std::cout << "  --tstack=num -s    thread stack size in Kb\n";
 #endif
     std::cout << "  --deps             just print dependencies of a Lean input\n";
+    std::cout << "  --old-oleans       reuse existing *.olean files\n";    
 #if defined(LEAN_JSON)
     std::cout << "  --path             display the path used for finding Lean libraries and extensions\n";
     std::cout << "  --json             print JSON-formatted structured error messages\n";
@@ -754,6 +755,7 @@ int main(int argc, char ** argv) {
         if (tlean_mode) {
             // TODO: multithread this!
             for (auto & mod : mods) {
+	      std::cout << "MOD" << mod.m_id << std::endl;
                 auto res = get(mod.m_mod_info->m_result);
                 auto tlean_fn = tlean_of_lean(mod.m_id);
                 exclusive_file_lock output_lock(tlean_fn);
