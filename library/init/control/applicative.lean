@@ -19,12 +19,12 @@ class has_seq (f : Type u → Type v) : Type (max (u+1) v) :=
 infixl ` <*> `:60 := has_seq.seq
 
 class has_seq_left (f : Type u → Type v) : Type (max (u+1) v) :=
-(seq_left : Π {α β : Type u}, f α → f β → f α)
+(seq_left : Π {α : Type u}, f α → f punit → f α)
 
 infixl ` <* `:60  := has_seq_left.seq_left
 
 class has_seq_right (f : Type u → Type v) : Type (max (u+1) v) :=
-(seq_right : Π {α β : Type u}, f α → f β → f β)
+(seq_right : Π {β : Type u}, f punit → f β → f β)
 
 infixl ` *> `:60  := has_seq_right.seq_right
 
