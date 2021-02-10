@@ -495,7 +495,7 @@ meta constant mk_app (fn : name) (args : list expr) (md := semireducible) : tact
    ```
    returns the application
    ```
-   @ite.{1} (a > b) (nat.decidable_gt a b) nat a b
+   @ite.{1} nat (a > b) (nat.decidable_gt a b) a b
    ```
 -/
 meta constant mk_mapp (fn : name) (args : list (option expr)) (md := semireducible) : tactic expr
