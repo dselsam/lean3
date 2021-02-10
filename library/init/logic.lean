@@ -619,12 +619,12 @@ is_false not_false
 
 -- We use "dependent" if-then-else to be able to communicate the if-then-else condition
 -- to the branches
-@[inline] def dite (c : Prop) [h : decidable c] {α : Sort u} : (c → α) → (¬ c → α) → α :=
+@[inline] def dite {α : Sort u} (c : Prop) [h : decidable c] : (c → α) → (¬ c → α) → α :=
 λ t e, decidable.rec_on h e t
 
 /- if-then-else -/
 
-@[inline] def ite (c : Prop) [h : decidable c] {α : Sort u} (t e : α) : α :=
+@[inline] def ite {α : Sort u} (c : Prop) [h : decidable c] (t e : α) : α :=
 decidable.rec_on h (λ hnc, e) (λ hc, t)
 
 namespace decidable
