@@ -24,8 +24,8 @@ attribute [simp] id_map
 -- `comp_map` does not make a good simp lemma
 
 class is_lawful_applicative (f : Type u → Type v) [applicative f] extends is_lawful_functor f : Prop :=
-(seq_left_eq  : ∀ {α β : Type u} (a : f α) (b : f β), a <* b = const _ <$> a <*> discard b . control_laws_tac)
-(seq_right_eq : ∀ {α β : Type u} (a : f α) (b : f β), a *> b = const _ id <$> discard a <*> b . control_laws_tac)
+(seq_left_eq  : ∀ {α β : Type u} (a : f α) (b : f β), a <* b = const β <$> a <*> b . control_laws_tac)
+(seq_right_eq : ∀ {α β : Type u} (a : f α) (b : f β), a *> b = const α id <$> a <*> b . control_laws_tac)
 -- applicative laws
 (pure_seq_eq_map : ∀ {α β : Type u} (g : α → β) (x : f α), pure g <*> x = g <$> x)
 (map_pure        : ∀ {α β : Type u} (g : α → β) (x : α), g <$> (pure x : f α) = pure (g x))
