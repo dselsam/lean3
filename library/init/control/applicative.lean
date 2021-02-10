@@ -30,5 +30,5 @@ infixl ` *> `:60  := has_seq_right.seq_right
 
 class applicative (f : Type u → Type v) extends functor f, has_pure f, has_seq f, has_seq_left f, has_seq_right f :=
 (map       := λ _ _ x y, pure x <*> y)
-(seq_left  := λ α a b, const α <$> a <*> b)
-(seq_right := λ β a b, const β id <$> a <*> b)
+(seq_left  := λ α a x, const _ <$> a <*> x)
+(seq_right := λ β x b, const _ id <$> x <*> b)
