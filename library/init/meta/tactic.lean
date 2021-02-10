@@ -1570,7 +1570,7 @@ expr.sort tgt_u ← infer_type tgt >>= whnf,
 g1 ← mk_meta_var (e.imp tgt),
 g2 ← mk_meta_var (`(¬ %%e).imp tgt),
 focus1 $ do
-  exact $ expr.const ``dite [tgt_u] e inst tgt g1 g2,
+  exact $ expr.const ``dite [tgt_u] tgt e inst g1 g2,
   set_goals [g1, g2],
   all_goals' $ intro h >> skip
 

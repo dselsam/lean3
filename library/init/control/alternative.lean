@@ -33,9 +33,7 @@ if h : p then pure ⟨h⟩ else failure
 | tt := pure ()
 | ff := failure
 
-@[inline] def optional' (x : f α) : f (option α) :=
+@[inline] def optional (x : f α) : f (option α) :=
 some <$> x <|> pure none
-
-@[inline] def optional (x : f α) : f punit := bind (optional' x) (λ _, pure ())
 
 end

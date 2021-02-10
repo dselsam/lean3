@@ -18,3 +18,8 @@ infixr ` <$ `:100  := functor.map_const
 @[reducible] def functor.map_const_rev {f : Type u → Type v} [functor f] {α β : Type u} : f β → α → f α :=
 λ a b, b <$ a
 infixr ` $> `:100  := functor.map_const_rev
+
+@[inline] def functor.discard {f : Type u → Type v} [functor f] {α : Type u} (x : f α) : f punit :=
+  functor.map_const punit.star x
+
+export functor (discard)
