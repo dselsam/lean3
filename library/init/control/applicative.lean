@@ -19,16 +19,16 @@ class has_seq (f : Type u → Type v) : Type (max (u+1) v) :=
 infixl ` <*> `:60 := has_seq.seq
 
 class has_seq_left (f : Type u → Type v) : Type (max (u+1) v) :=
-(seq_left : Π {α β : Type u}, f α → f β → f α)
+(seq_left : Π {α : Type u}, f α → f punit → f α)
 
 infixl ` <* `:60  := has_seq_left.seq_left
 
 class has_seq_right (f : Type u → Type v) : Type (max (u+1) v) :=
-(seq_right : Π {α β : Type u}, f α → f β → f β)
+(seq_right : Π {β : Type u}, f punit → f β → f β)
 
 infixl ` *> `:60  := has_seq_right.seq_right
 
 class applicative (f : Type u → Type v) extends functor f, has_pure f, has_seq f, has_seq_left f, has_seq_right f :=
 (map       := λ _ _ x y, pure x <*> y)
-(seq_left  := λ α β a b, const β <$> a <*> b)
-(seq_right := λ α β a b, const α id <$> a <*> b)
+(seq_left  := λ α a b, const _ <$> a <*> b)
+(seq_right := λ β a b, const _ id <$> a <*> b)

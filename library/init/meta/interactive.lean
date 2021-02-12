@@ -173,7 +173,7 @@ propagate_tags (tactic.introv ns >> return ())
 
 /-- Parse a current name and new name for `rename`. -/
 private meta def rename_arg_parser : parser (name × name) :=
-  prod.mk <$> ident <*> (optional (tk "->") *> ident)
+  prod.mk <$> ident <*> (discard (optional (tk "->")) *> ident)
 
 /-- Parse the arguments of `rename`. -/
 private meta def rename_args_parser : parser (list (name × name)) :=
