@@ -166,9 +166,9 @@ void initialize_declaration() {
     zeppelin::classifier("unfold", 8, 3, true, 0.2,
                          [](std::vector<float> const & features) {
                              float height_ratio = features[3];
-                             if (height_ratio > 1) return -1;
-                             else if (height_ratio < 1) return 1;
-                             else return 0;
+                             if (height_ratio > 1) return 0;
+                             else if (height_ratio < 1) return 2;
+                             else return 1;
                          });
     g_dummy = new declaration(mk_axiom(name(), level_param_names(), expr()));
 }
