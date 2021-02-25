@@ -16,12 +16,12 @@ static std::vector<float> unfold_features(expr const & t1, expr const & t2, redu
     float t1_weight   = (float) get_weight(t1);
     float t1_depth    = (float) get_depth(t1);
     float t1_num_args = (float) get_app_num_args(t1);
-    float t1_height   = (fleat) h1.get_height();
+    float t1_height   = (float) h1.get_height();
 
     float t2_weight   = (float) get_weight(t2);
     float t2_depth    = (float) get_depth(t2);
     float t2_num_args = (float) get_app_num_args(t2);
-    float t2_height   = (fleat) h2.get_height();
+    float t2_height   = (float) h2.get_height();
 
     return {
             t1_weight   / t2_weight,
