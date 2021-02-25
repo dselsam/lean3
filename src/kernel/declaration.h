@@ -65,7 +65,7 @@ public:
     bool use_self_opt() const { return m_self_opt; }
 };
 
-int compare(reducibility_hints const & h1, reducibility_hints const & h2);
+int compare(expr const & t1, expr const & t2, reducibility_hints const & h1, reducibility_hints const & h2);
 
 /** \brief Environment definitions, theorems, axioms and variable declarations. */
 class declaration {

@@ -4,33 +4,50 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author: Leonardo de Moura
 */
+#include "zeppelin.h"
 #include "kernel/declaration.h"
 #include "kernel/environment.h"
 #include "kernel/for_each_fn.h"
 #include "util/task_builder.h"
 
 namespace lean {
-int compare(reducibility_hints const & h1, reducibility_hints const & h2) {
-    if (h1.m_kind == h2.m_kind) {
-        if (h1.m_kind == reducibility_hints::Regular) {
-            if (h1.m_height == h2.m_height)
-                return 0; /* unfold both */
-            else if (h1.m_height > h2.m_height)
-                return -1; /* unfold f1 */
-            else
-                return 1;  /* unfold f2 */
-            return h1.m_height > h2.m_height ? -1 : 1;
+
+static std::vector<float> unfold_features(expr const & t, expr const & s, reducibility_hints const & h1, reducibility_hints const & h2) {
+    float t_weight   = get_weight(t);
+    float t_depth    = get_depth(t);
+    float t_num_args = get_app_num_args(t);
+
+    float s_weight   = get_weight(s);
+    float s_depth    = get_depth(s);
+    float s_num_args = get_app_num_args(s);
+
+    return {
+            t_weight / s_weight,
+            t_depth / s_depth,
+            t_num_args / s_num_args,
+            h1.get_height() / h2.get_height(),
+            std::max(t_weight, s_weight),
+            std::max(t_depth, s_depth),
+            std::max(t_num_args, s_num_args),
+            std::max(h1.get_height(), h2.get_height())
+    };
+}
+
+int compare(expr const & t1, expr const & t2, reducibility_hints const & h1, reducibility_hints const & h2) {
+    if (h1.get_kind() == h2.get_kind()) {
+        if (h1.get_kind() == reducibility_hints::Regular) {
+            return zeppelin::classify("unfold", unfold_features(t1, t2, h1, h2)) - 1;
         } else {
             return 0; /* reduce both */
         }
     } else {
-        if (h1.m_kind == reducibility_hints::Opaque) {
+        if (h1.get_kind() == reducibility_hints::Opaque) {
             return 1; /* reduce f2 */
-        } else if (h2.m_kind == reducibility_hints::Opaque) {
+        } else if (h2.get_kind() == reducibility_hints::Opaque) {
             return -1; /* reduce f1 */
-        } else if (h1.m_kind == reducibility_hints::Abbreviation) {
+        } else if (h1.get_kind() == reducibility_hints::Abbreviation) {
             return -1; /* reduce f1 */
-        } else if (h2.m_kind == reducibility_hints::Abbreviation) {
+        } else if (h2.get_kind() == reducibility_hints::Abbreviation) {
             return 1; /* reduce f2 */
         } else {
             lean_unreachable();
@@ -144,6 +161,7 @@ declaration mk_constant_assumption_inferring_trusted(environment const & env, na
 }
 
 void initialize_declaration() {
+    zeppelin::classifier("unfold", 8, 3, true);
     g_dummy = new declaration(mk_axiom(name(), level_param_names(), expr()));
 }
 
