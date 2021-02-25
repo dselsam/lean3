@@ -425,7 +425,7 @@ public:
 };
 
 int main(int argc, char ** argv) {
-    zeppelin::initialize();
+    zeppelin::initialize("localhost", 50051);
     time_t zeppelin_start_time = time(NULL);
 
 #if defined(LEAN_EMSCRIPTEN)
