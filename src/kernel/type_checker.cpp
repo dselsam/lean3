@@ -595,7 +595,8 @@ static std::vector<float> self_opt_features(expr const & t, expr const & s) {
             std::max(t_weight / s_weight, s_weight / t_weight),
             std::max(t_weight, s_weight),
             std::max(t_depth / s_depth, s_depth / t_depth),
-            std::max(t_depth, s_depth)
+            std::max(t_depth, s_depth),
+            std::max(t_num_args, s_num_args)
     };
 }
 
@@ -826,7 +827,7 @@ certified_declaration certify_unchecked::certify_or_check(environment const & en
 }
 
 void initialize_type_checker() {
-    zeppelin::classifier("self_opt", 4, 2, true);
+    zeppelin::classifier("self_opt", 5, 2, true);
 
     g_id_delta     = new name("id_delta");
     g_dont_care    = new expr(Const("dontcare"));
