@@ -12,24 +12,26 @@ Author: Leonardo de Moura
 
 namespace lean {
 
-static std::vector<float> unfold_features(expr const & t, expr const & s, reducibility_hints const & h1, reducibility_hints const & h2) {
-    float t_weight   = get_weight(t);
-    float t_depth    = get_depth(t);
-    float t_num_args = get_app_num_args(t);
+static std::vector<float> unfold_features(expr const & t1, expr const & t2, reducibility_hints const & h1, reducibility_hints const & h2) {
+    float t1_weight   = (float) get_weight(t1);
+    float t1_depth    = (float) get_depth(t1);
+    float t1_num_args = (float) get_app_num_args(t1);
+    float t1_height   = (fleat) h1.get_height();
 
-    float s_weight   = get_weight(s);
-    float s_depth    = get_depth(s);
-    float s_num_args = get_app_num_args(s);
+    float t2_weight   = (float) get_weight(t2);
+    float t2_depth    = (float) get_depth(t2);
+    float t2_num_args = (float) get_app_num_args(t2);
+    float t2_height   = (fleat) h2.get_height();
 
     return {
-            t_weight / s_weight,
-            t_depth / s_depth,
-            t_num_args / s_num_args,
-            h1.get_height() / h2.get_height(),
-            std::max(t_weight, s_weight),
-            std::max(t_depth, s_depth),
-            std::max(t_num_args, s_num_args),
-            std::max(h1.get_height(), h2.get_height())
+            t1_weight   / t2_weight,
+            t1_depth    / t2_depth,
+            t1_num_args / t2_num_args,
+            t1_height   / t2_height,
+            std::max(t1_weight,   t2_weight),
+            std::max(t1_depth,    t2_depth),
+            std::max(t1_num_args, t2_num_args),
+            std::max(t1_height,   t2_height)
     };
 }
 

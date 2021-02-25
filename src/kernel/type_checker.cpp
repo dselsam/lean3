@@ -583,13 +583,13 @@ void type_checker::cache_failure(expr const & t, expr const & s) {
 static name * g_id_delta = nullptr;
 
 static std::vector<float> self_opt_features(expr const & t, expr const & s) {
-    float t_weight   = get_weight(t);
-    float t_depth    = get_depth(t);
-    float t_num_args = get_app_num_args(t);
+    float t_weight   = (float) get_weight(t);
+    float t_depth    = (float) get_depth(t);
+    float t_num_args = (float) get_app_num_args(t);
 
-    float s_weight   = get_weight(s);
-    float s_depth    = get_depth(s);
-    float s_num_args = get_app_num_args(s);
+    float s_weight   = (float) get_weight(s);
+    float s_depth    = (float) get_depth(s);
+    float s_num_args = (float) get_app_num_args(s);
 
     return {
             std::max(t_weight / s_weight, s_weight / t_weight),
@@ -630,7 +630,7 @@ auto type_checker::lazy_delta_reduction_step(expr & t_n, expr & s_n) -> reductio
     } else if (!d_t && d_s) {
         s_n = whnf_core(*unfold_definition(s_n));
     } else {
-        int c = compare(d_t->get_hints(), d_s->get_hints());
+        int c = compare(t_n, s_n, d_t->get_hints(), d_s->get_hints());
         if (c < 0) {
             t_n = whnf_core(*unfold_definition(t_n));
         } else if (c > 0) {
