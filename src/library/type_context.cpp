@@ -3233,7 +3233,7 @@ lbool type_context_old::is_def_eq_delta(expr const & t, expr const & s) {
                then we try to use the definitional height to decide which one we will unfold
                (i.e., we mimic the behavior of the kernel type checker. */
             if (!has_expr_metavar(t) && !has_expr_metavar(s)) {
-                int c = compare(d_t->get_hints(), d_s->get_hints());
+                int c = compare(t, s, d_t->get_hints(), d_s->get_hints());
                 if (c < 0) {
                     if (auto new_t = unfold_definition(t))
                         return to_lbool(is_def_eq_core_core(*new_t, s));
