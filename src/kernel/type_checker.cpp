@@ -827,7 +827,10 @@ certified_declaration certify_unchecked::certify_or_check(environment const & en
 }
 
 void initialize_type_checker() {
-    zeppelin::classifier("self_opt", 5, 2, true);
+    zeppelin::classifier("self_opt", 5, 2, true, 0.2,
+                         [](std::vector<float> const & features) {
+                             return 1;
+                         });
 
     g_id_delta     = new name("id_delta");
     g_dont_care    = new expr(Const("dontcare"));

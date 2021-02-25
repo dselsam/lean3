@@ -163,7 +163,13 @@ declaration mk_constant_assumption_inferring_trusted(environment const & env, na
 }
 
 void initialize_declaration() {
-    zeppelin::classifier("unfold", 8, 3, true);
+    zeppelin::classifier("unfold", 8, 3, true, 0.2,
+                         [](std::vector<float> const & features) {
+                             float height_ratio = features[3];
+                             if (height_ratio > 1) return -1;
+                             else if (height_ratio < 1) return 1;
+                             else return 0;
+                         });
     g_dummy = new declaration(mk_axiom(name(), level_param_names(), expr()));
 }
 
