@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author: Leonardo de Moura
 */
+#include "zeppelin.h"
 #include <iostream>
 #include <fstream>
 #include <signal.h>
@@ -424,6 +425,9 @@ public:
 };
 
 int main(int argc, char ** argv) {
+    zeppelin::initialize();
+    time_t zeppelin_start_time = time(NULL);
+
 #if defined(LEAN_EMSCRIPTEN)
     LEAN_EMSCRIPTEN_ENV
     LEAN_EMSCRIPTEN_FS
@@ -720,6 +724,9 @@ int main(int argc, char ** argv) {
         }
 
         taskq().wait_for_finish(lt.get_root().wait_for_finish());
+
+        time_t zeppelin_end_time = time(NULL);
+        zeppelin::minimize(difftime(zeppelin_start_time, zeppelin_end_time));
 
         for (auto & mod : mods) {
             if (test_suite) {
