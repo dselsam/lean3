@@ -652,7 +652,7 @@ auto type_checker::lazy_delta_reduction_step(expr & t_n, expr & s_n) -> reductio
                     // skip the delta-reduction step.
                     // If the flag use_self_opt() is not true, then we skip this optimization
                     if (!failed_before(t_n, s_n)) {
-                        vector<float> features = self_opt_features(t_n, s_n);
+                        std::vector<float> features = self_opt_features(t_n, s_n);
                         if (zeppelin::classify("kernel_self_opt", features)) {
                             bool target = is_def_eq(const_levels(get_app_fn(t_n)), const_levels(get_app_fn(s_n))) && is_def_eq_args(t_n, s_n);
                             zeppelin::label("kernel_self_opt", features, target);

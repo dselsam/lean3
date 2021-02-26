@@ -3205,7 +3205,7 @@ lbool type_context_old::is_def_eq_delta(expr const & t, expr const & s) {
                 if (!is_cached_failure(t, s)) {
                     /* Heuristic: try so solve (f a =?= f b) by solving (a =?= b) */
                     scope S(*this);
-                    vector<float> features = self_opt_features(t_n, s_n);
+                    std::vector<float> features = self_opt_features(t, s);
                     if (zeppelin::classify("meta_self_opt", features)) {
                         bool target = is_def_eq_args(t, s) && is_def_eq(const_levels(get_app_fn(t)), const_levels(get_app_fn(s))) && process_postponed(S);
                         zeppelin::label("meta_self_opt", features, target);
