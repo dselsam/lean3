@@ -600,6 +600,7 @@ static std::vector<float> self_opt_features(expr const & t, expr const & s) {
     };
 }
 
+
 /** \brief Perform one lazy delta-reduction step.
      Return
      - l_true if t_n and s_n are definitionally equal.
@@ -631,7 +632,7 @@ auto type_checker::lazy_delta_reduction_step(expr & t_n, expr & s_n) -> reductio
     } else if (!d_t && d_s) {
         s_n = whnf_core(*unfold_definition(s_n));
     } else {
-        int c = compare(t_n, s_n, d_t->get_hints(), d_s->get_hints());
+        int c = compare(d_t->get_hints(), d_s->get_hints());
         if (c < 0) {
             t_n = whnf_core(*unfold_definition(t_n));
         } else if (c > 0) {
@@ -650,13 +651,13 @@ auto type_checker::lazy_delta_reduction_step(expr & t_n, expr & s_n) -> reductio
                     // If they are, then t_n and s_n must be definitionally equal, and we can
                     // skip the delta-reduction step.
                     // If the flag use_self_opt() is not true, then we skip this optimization
-                    if (!failed_before(t_n, s_n) && is_def_eq(const_levels(get_app_fn(t_n)), const_levels(get_app_fn(s_n)))) {
-                        if (zeppelin::classify("self_opt", self_opt_features(t_n, s_n))) {
-                            if (is_def_eq_args(t_n, s_n)) {
-                                return reduction_status::DefEqual;
-                            } else {
-                                cache_failure(t_n, s_n);
-                            }
+                    if (!failed_before(t_n, s_n)) {
+                        vector<float> features = self_opt_features(t_n, s_n);
+                        if (zeppelin::classify("kernel_self_opt", features)) {
+                            bool target = is_def_eq(const_levels(get_app_fn(t_n)), const_levels(get_app_fn(s_n))) && is_def_eq_args(t_n, s_n);
+                            zeppelin::label("kernel_self_opt", features, target);
+                            if (target) return reduction_status::DefEqual;
+                            else cache_failure(t_n, s_n);
                         }
                     }
                 }
@@ -827,7 +828,7 @@ certified_declaration certify_unchecked::certify_or_check(environment const & en
 }
 
 void initialize_type_checker() {
-    zeppelin::classifier("self_opt", 5, 2, true, 0.2,
+    zeppelin::classifier("kernel_self_opt", 5, 2,
                          [](std::vector<float> const &) {
                              return 1;
                          });

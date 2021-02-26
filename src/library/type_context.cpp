@@ -3150,6 +3150,34 @@ lbool type_context_old::try_nat_offset_cnstrs(expr const & t, expr const & s) {
     return try_numeral_eq_numeral(t, s);
 }
 
+static std::vector<float> self_opt_features(expr const & t, expr const & s) {
+    float t_weight   = (float) get_weight(t);
+    float t_depth    = (float) get_depth(t);
+    float t_num_args = (float) get_app_num_args(t);
+
+    float s_weight   = (float) get_weight(s);
+    float s_depth    = (float) get_depth(s);
+    float s_num_args = (float) get_app_num_args(s);
+
+    float t_meta  = (float) t.has_expr_metavar();
+    float s_meta  = (float) s.has_expr_metavar();
+    float t_univ  = (float) t.has_param_univ();
+    float s_univ  = (float) s.has_param_univ();
+    float t_local = (float) t.has_local();
+    float s_local = (float) s.has_local();
+
+    return {
+            std::max(t_weight / s_weight, s_weight / t_weight),
+            std::max(t_weight, s_weight),
+            std::max(t_depth / s_depth, s_depth / t_depth),
+            std::max(t_depth, s_depth),
+            std::max(t_num_args, s_num_args),
+            t_meta + s_meta,
+            t_univ + s_univ,
+            t_local + s_local
+    };
+}
+
 lbool type_context_old::is_def_eq_delta(expr const & t, expr const & s) {
     optional<declaration> d_t = is_delta(t);
     optional<declaration> d_s = is_delta(s);
@@ -3177,13 +3205,16 @@ lbool type_context_old::is_def_eq_delta(expr const & t, expr const & s) {
                 if (!is_cached_failure(t, s)) {
                     /* Heuristic: try so solve (f a =?= f b) by solving (a =?= b) */
                     scope S(*this);
-                    if (is_def_eq_args(t, s) &&
-                        is_def_eq(const_levels(get_app_fn(t)), const_levels(get_app_fn(s))) &&
-                        process_postponed(S)) {
-                        S.commit();
-                        return l_true;
-                    } else if (!has_postponed && !has_expr_metavar(t) && !has_expr_metavar(s)) {
+                    vector<float> features = self_opt_features(t_n, s_n);
+                    if (zeppelin::classify("meta_self_opt", features)) {
+                        bool target = is_def_eq_args(t, s) && is_def_eq(const_levels(get_app_fn(t)), const_levels(get_app_fn(s))) && process_postponed(S);
+                        zeppelin::label("meta_self_opt", features, target);
+                        if (target) {
+                            S.commit();
+                            return l_true;
+                        } else if (!has_postponed && !has_expr_metavar(t) && !has_expr_metavar(s)) {
                         cache_failure(t, s);
+                        }
                     }
                 }
                 /* Heuristic failed, then unfold both of them */
@@ -3233,7 +3264,7 @@ lbool type_context_old::is_def_eq_delta(expr const & t, expr const & s) {
                then we try to use the definitional height to decide which one we will unfold
                (i.e., we mimic the behavior of the kernel type checker. */
             if (!has_expr_metavar(t) && !has_expr_metavar(s)) {
-                int c = compare(t, s, d_t->get_hints(), d_s->get_hints());
+                int c = compare(d_t->get_hints(), d_s->get_hints());
                 if (c < 0) {
                     if (auto new_t = unfold_definition(t))
                         return to_lbool(is_def_eq_core_core(*new_t, s));
@@ -4355,6 +4386,11 @@ mk_pp_ctx(type_context_old const & ctx) {
 }
 
 void initialize_type_context() {
+    zeppelin::classifier("meta_self_opt", 8, 2,
+                         [](std::vector<float> const &) {
+                             return 1;
+                         });
+
     register_trace_class("class_instances");
     register_trace_class(name({"type_context", "unification_hint"}));
     register_trace_class(name({"type_context", "is_def_eq"}));

@@ -426,7 +426,6 @@ public:
 
 int main(int argc, char ** argv) {
     zeppelin::initialize("localhost", 50051);
-    time_t zeppelin_start_time = time(NULL);
 
 #if defined(LEAN_EMSCRIPTEN)
     LEAN_EMSCRIPTEN_ENV
@@ -724,9 +723,6 @@ int main(int argc, char ** argv) {
         }
 
         taskq().wait_for_finish(lt.get_root().wait_for_finish());
-
-        time_t zeppelin_end_time = time(NULL);
-        zeppelin::minimize(difftime(zeppelin_start_time, zeppelin_end_time));
 
         for (auto & mod : mods) {
             if (test_suite) {

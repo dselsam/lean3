@@ -57,7 +57,7 @@ public:
             <  0 If f1 should be unfolded
             == 0 If f1 and f2 should be unfolded
             >  0 If f2 should be unfolded */
-    friend int compare(expr const & t1, expr const & t2, reducibility_hints const & h1, reducibility_hints const & h2);
+    friend int compare(reducibility_hints const & h1, reducibility_hints const & h2);
 
     unsigned get_height() const { return m_height; }
     kind get_kind() const { return m_kind; }
@@ -65,7 +65,7 @@ public:
     bool use_self_opt() const { return m_self_opt; }
 };
 
-int compare(expr const & t1, expr const & t2, reducibility_hints const & h1, reducibility_hints const & h2);
+int compare(reducibility_hints const & h1, reducibility_hints const & h2);
 
 /** \brief Environment definitions, theorems, axioms and variable declarations. */
 class declaration {
