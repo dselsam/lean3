@@ -5,6 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Leonardo de Moura
 */
 #include "devin.h"
+#include <sys/time.h>
 #include <cmath>
 #include <utility>
 #include <vector>
@@ -583,6 +584,38 @@ void type_checker::cache_failure(expr const & t, expr const & s) {
 
 static name * g_id_delta = nullptr;
 
+static std::vector<float> compare_features(expr const & t1, expr const & t2, reducibility_hints const & h1, reducibility_hints const & h2) {
+    float t1_weight   = log((float) get_weight(t1));
+    float t1_depth    = log((float) get_depth(t1));
+    float t1_num_args = (float) get_app_num_args(t1);
+    float t1_height   = log((float) h1.get_height());
+
+    float t2_weight   = log((float) get_weight(t2));
+    float t2_depth    = log((float) get_depth(t2));
+    float t2_num_args = (float) get_app_num_args(t2);
+    float t2_height   = log((float) h2.get_height());
+
+    return {
+            t1_weight   - t2_weight,
+            t1_depth    - t2_depth,
+            t1_num_args - t2_num_args,
+            t1_height   - t2_height,
+
+            t1_weight   + t2_weight,
+            t1_depth    + t2_depth,
+            t1_num_args + t2_num_args,
+            t1_height   + t2_height)
+    };
+}
+
+int compare(expr const & t1, expr const & t2, reducibility_hints const & h1, reducibility_hints const & h2) {
+    if (h1.m_kind == h2.m_kind && h1.m_kind == reducibility_hints::Regular) {
+        return devin::rl::act("kernel.type_checker.is_def_eq", compare_features(t1, t2, h1, h2)) - 1;
+    } else {
+        return compare(h1, h2);
+    }
+}
+
 static std::vector<float> self_opt_features(expr const & t, expr const & s) {
     float t_weight   = log((float) get_weight(t));
     float t_depth    = log((float) get_depth(t));
@@ -634,7 +667,7 @@ auto type_checker::lazy_delta_reduction_step(expr & t_n, expr & s_n) -> reductio
     } else if (!d_t && d_s) {
         s_n = whnf_core(*unfold_definition(s_n));
     } else {
-        int c = compare(d_t->get_hints(), d_s->get_hints());
+        int c = compare(d_t, d_s, d_t->get_hints(), d_s->get_hints());
         if (c < 0) {
             t_n = whnf_core(*unfold_definition(t_n));
         } else if (c > 0) {
@@ -655,9 +688,9 @@ auto type_checker::lazy_delta_reduction_step(expr & t_n, expr & s_n) -> reductio
                     // If the flag use_self_opt() is not true, then we skip this optimization
                     if (!failed_before(t_n, s_n)) {
                         std::vector<float> features = self_opt_features(t_n, s_n);
-                        if (devin::sl::predict("kernel.self_opt", features)) {
+                        if (devin::sl::predict("kernel.type_checker.self_opt", features)) {
                             bool target = is_def_eq(const_levels(get_app_fn(t_n)), const_levels(get_app_fn(s_n))) && is_def_eq_args(t_n, s_n);
-                            devin::sl::label("kernel.self_opt", features, target);
+                            devin::sl::label("kernel.type_checker.self_opt", features, target);
                             if (target) return reduction_status::DefEqual;
                             else cache_failure(t_n, s_n);
                         }
@@ -736,7 +769,13 @@ bool type_checker::is_def_eq_core(expr const & t, expr const & s) {
 }
 
 bool type_checker::is_def_eq(expr const & t, expr const & s) {
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    devin::rl::start("kernel.type_checker.is_def_eq");
     bool r = is_def_eq_core(t, s);
+    gettimeofday(&end, NULL);
+    devin::rl::reward("kernel.type_checker.is_def_eq", 1000000 * (start.tv_sec - end.tv_sec) + (start.tv_usec - end.tv_usec));
+    devin::rl::end("kernel.type_checker.is_def_eq");
     if (r)
         m_eqv_manager.add_equiv(t, s);
     return r;
@@ -830,10 +869,17 @@ certified_declaration certify_unchecked::certify_or_check(environment const & en
 }
 
 void initialize_type_checker() {
-    devin::sl::new_classifier("kernel.self_opt", 6, 2,
-                              [](std::vector<float> const &) {
-                                  return 1;
-                              });
+    devin::sl::new_classifier("kernel.typechecker.self_opt", 6, 2, [](std::vector<float> const &) { return 1; });
+
+    devin::rl::new_agent("kernel.typechecker.is_def_eq", 8, 3,
+                         [](std::vector<float> const & features) {
+                             float diff = features[0];
+                             if (diff > 0) {
+                                 return 0;
+                             } else if (diff < 0) {
+                                 return 2;
+                             } else return 1;
+                         });
 
     g_id_delta     = new name("id_delta");
     g_dont_care    = new expr(Const("dontcare"));
