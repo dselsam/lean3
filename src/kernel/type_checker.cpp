@@ -871,14 +871,16 @@ certified_declaration certify_unchecked::certify_or_check(environment const & en
 void initialize_type_checker() {
     devin::sl::new_classifier("kernel.typechecker.self_opt", 6, 2, [](std::vector<float> const &) { return 1; });
 
-    devin::rl::new_agent("kernel.typechecker.is_def_eq", 8, 3,
+    devin::rl::new_agent("kernel.typechecker.is_def_eq", 8, 3, 0.99,
                          [](std::vector<float> const & features) {
                              float diff = features[0];
                              if (diff > 0) {
                                  return 0;
                              } else if (diff < 0) {
                                  return 2;
-                             } else return 1;
+                             } else {
+                                 return 1;
+                             }
                          });
 
     g_id_delta     = new name("id_delta");
