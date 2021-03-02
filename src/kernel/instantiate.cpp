@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author: Leonardo de Moura
 */
+#include "devin.h"
+#include <time.h>
 #include <algorithm>
 #include <limits>
 #include <vector>
@@ -12,9 +14,8 @@ Author: Leonardo de Moura
 #include "kernel/declaration.h"
 #include "kernel/instantiate.h"
 
-#ifndef LEAN_INST_UNIV_CACHE_SIZE
-#define LEAN_INST_UNIV_CACHE_SIZE 1023
-#endif
+static unsigned LEAN_INST_UNIV_CACHE_SIZE;
+static double g_elapsed;
 
 namespace lean {
 class instantiate_univ_cache {
@@ -221,4 +222,15 @@ void clear_instantiate_cache() {
     get_type_univ_cache().clear();
     get_value_univ_cache().clear();
 }
+
+void initialize_instantiate() {
+    devin::optim::new_optimizer("kernel.instantiate");
+    LEAN_INST_UNIV_CACHE_SIZE = devin::optim::choose_int("kernel.instantiate", "cache_size", 1, 32, []() { return 8; }) * 128;
+    g_elapsed = 0.0;
+}
+
+void finalize_instantiate() {
+    devin::optim::minimize("kernel.instantiate_fn", g_elapsed);
+}
+
 }

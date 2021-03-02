@@ -24,4 +24,8 @@ namespace lean {
     The \c offset is the number of binders under which \c e occurs.
 */
 void for_each(expr const & e, std::function<bool(expr const &, unsigned)> && f); // NOLINT
+
+void initialize_for_each_fn();
+void finalize_for_each_fn();
+
 }

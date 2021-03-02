@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author: Leonardo de Moura
 */
+#include "devin.h"
 #include <iostream>
 #include <fstream>
 #include <signal.h>
@@ -424,6 +425,8 @@ public:
 };
 
 int main(int argc, char ** argv) {
+    devin_initialize("localhost", 50051);
+
 #if defined(LEAN_EMSCRIPTEN)
     LEAN_EMSCRIPTEN_ENV
     LEAN_EMSCRIPTEN_FS

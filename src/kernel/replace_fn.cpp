@@ -4,14 +4,16 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author: Leonardo de Moura
 */
+#include "devin.h"
+#include <sys/time.h>
+#include <time.h>
 #include <vector>
 #include <memory>
 #include "kernel/replace_fn.h"
 #include "kernel/cache_stack.h"
 
-#ifndef LEAN_DEFAULT_REPLACE_CACHE_CAPACITY
-#define LEAN_DEFAULT_REPLACE_CACHE_CAPACITY 1024*8
-#endif
+static unsigned LEAN_DEFAULT_REPLACE_CACHE_CAPACITY;
+static double g_elapsed;
 
 namespace lean {
 struct replace_cache {
@@ -115,10 +117,28 @@ public:
     template<typename F>
     replace_rec_fn(F const & f, bool use_cache):m_f(f), m_use_cache(use_cache) {}
 
-    expr operator()(expr const & e) { return apply(e, 0); }
+    expr operator()(expr const & e) {
+        struct timeval start, end;
+        gettimeofday(&start, NULL);
+        expr result = apply(e, 0);
+        gettimeofday(&end, NULL);
+        g_elapsed += 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
+        return result;
+    }
 };
 
 expr replace(expr const & e, std::function<optional<expr>(expr const &, unsigned)> const & f, bool use_cache) {
     return replace_rec_fn(f, use_cache)(e);
 }
+
+void initialize_replace_fn() {
+    devin::optim::new_optimizer("kernel.replace_fn");
+    LEAN_DEFAULT_REPLACE_CACHE_CAPACITY = devin::optim::choose_int("kernel.replace_fn", "cache_capacity", 2, 32, []() { return 8; }) * 1024;
+    g_elapsed = 0.0;
+}
+
+void finalize_replace_fn() {
+    devin::optim::minimize("kernel.replace_fn", g_elapsed);
+}
+
 }

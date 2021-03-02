@@ -13,6 +13,11 @@ if (LEAN_SPECIAL_VERSION_DESC)
   set(LEAN_VERSION_STRING "${LEAN_VERSION_STRING}-${LEAN_SPECIAL_VERSION_DESC}")
 endif()
 
+# Docker
+include_directories(/app/cpp)
+link_directories(/app/cpp/build)
+link_libraries(devin)
+
 set(LEAN_EXTRA_LINKER_FLAGS "" CACHE STRING "Additional flags used by the linker")
 set(LEAN_EXTRA_CXX_FLAGS "" CACHE STRING "Additional flags used by the C++ compiler")
 

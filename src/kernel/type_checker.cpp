@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author: Leonardo de Moura
 */
+#include "devin.h"
+#include <cmath>
 #include <utility>
 #include <vector>
 #include "util/task.h"
@@ -581,6 +583,26 @@ void type_checker::cache_failure(expr const & t, expr const & s) {
 
 static name * g_id_delta = nullptr;
 
+static std::vector<float> self_opt_features(expr const & t, expr const & s) {
+    float t_weight   = log((float) get_weight(t));
+    float t_depth    = log((float) get_depth(t));
+    float t_num_args = (float) get_app_num_args(t);
+
+    float s_weight   = log((float) get_weight(s));
+    float s_depth    = log((float) get_depth(s));
+    float s_num_args = (float) get_app_num_args(s);
+
+    return {
+            fabs(t_weight - s_weight),
+            std::max(t_weight, s_weight),
+            fabs(t_depth - s_depth),
+            std::max(t_depth, s_depth),
+            abs(t_num_args - s_num_args),
+            std::max(t_num_args, s_num_args)
+    };
+}
+
+
 /** \brief Perform one lazy delta-reduction step.
      Return
      - l_true if t_n and s_n are definitionally equal.
@@ -631,12 +653,13 @@ auto type_checker::lazy_delta_reduction_step(expr & t_n, expr & s_n) -> reductio
                     // If they are, then t_n and s_n must be definitionally equal, and we can
                     // skip the delta-reduction step.
                     // If the flag use_self_opt() is not true, then we skip this optimization
-                    if (d_t->get_hints().use_self_opt() && !failed_before(t_n, s_n)) {
-                        if (is_def_eq(const_levels(get_app_fn(t_n)), const_levels(get_app_fn(s_n))) &&
-                            is_def_eq_args(t_n, s_n)) {
-                            return reduction_status::DefEqual;
-                        } else {
-                            cache_failure(t_n, s_n);
+                    if (!failed_before(t_n, s_n)) {
+                        std::vector<float> features = self_opt_features(t_n, s_n);
+                        if (devin::sl::predict("kernel.self_opt", features)) {
+                            bool target = is_def_eq(const_levels(get_app_fn(t_n)), const_levels(get_app_fn(s_n))) && is_def_eq_args(t_n, s_n);
+                            devin::sl::label("kernel.self_opt", features, target);
+                            if (target) return reduction_status::DefEqual;
+                            else cache_failure(t_n, s_n);
                         }
                     }
                 }
@@ -807,6 +830,11 @@ certified_declaration certify_unchecked::certify_or_check(environment const & en
 }
 
 void initialize_type_checker() {
+    devin::sl::new_classifier("kernel.self_opt", 6, 2,
+                              [](std::vector<float> const &) {
+                                  return 1;
+                              });
+
     g_id_delta     = new name("id_delta");
     g_dont_care    = new expr(Const("dontcare"));
     g_kernel_fresh = new name("_kernel_fresh");

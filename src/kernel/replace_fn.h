@@ -24,4 +24,7 @@ expr replace(expr const & e, std::function<optional<expr>(expr const &, unsigned
 inline expr replace(expr const & e, std::function<optional<expr>(expr const &)> const & f, bool use_cache = true) {
     return replace(e, [&](expr const & e, unsigned) { return f(e); }, use_cache);
 }
+
+void initialize_replace_fn();
+void finalize_replace_fn();
 }

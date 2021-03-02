@@ -4,6 +4,9 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 Author: Leonardo de Moura
 */
+#include "devin.h"
+#include <sys/time.h>
+#include <time.h>
 #include <vector>
 #include <utility>
 #include "util/flet.h"
@@ -12,9 +15,8 @@ Author: Leonardo de Moura
 #include "kernel/for_each_fn.h"
 #include "kernel/cache_stack.h"
 
-#ifndef LEAN_DEFAULT_FOR_EACH_CACHE_CAPACITY
-#define LEAN_DEFAULT_FOR_EACH_CACHE_CAPACITY 1024*8
-#endif
+static unsigned LEAN_DEFAULT_FOR_EACH_CACHE_CAPACITY;
+static double g_elapsed;
 
 namespace lean {
 struct for_each_cache {
@@ -119,10 +121,27 @@ class for_each_fn {
 public:
     for_each_fn(std::function<bool(expr const &, unsigned)> && f):m_f(f) {}        // NOLINT
     for_each_fn(std::function<bool(expr const &, unsigned)> const & f):m_f(f) {}   // NOLINT
-    void operator()(expr const & e) { apply(e, 0); }
+    void operator()(expr const & e) {
+        struct timeval start, end;
+        gettimeofday(&start, NULL);
+        apply(e, 0);
+        gettimeofday(&end, NULL);
+        g_elapsed += 1000000 * (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec);
+    }
 };
 
 void for_each(expr const & e, std::function<bool(expr const &, unsigned)> && f) { // NOLINT
     return for_each_fn(f)(e);
 }
+
+void initialize_for_each_fn() {
+    devin::optim::new_optimizer("kernel.for_each_fn");
+    LEAN_DEFAULT_FOR_EACH_CACHE_CAPACITY = devin::optim::choose_int("kernel.for_each_fn", "cache_capacity", 2, 32, []() { return 8; }) * 1024;
+    g_elapsed = 0.0;
+}
+
+void finalize_for_each_fn() {
+    devin::optim::minimize("kernel.for_each_fn", g_elapsed);
+}
+
 }
