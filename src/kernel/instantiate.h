@@ -48,7 +48,4 @@ expr instantiate_value_univ_params(declaration const & d, levels const & ls);
     We clear the caches whenever we enable expression caching (aka max sharing).
     We do that because the cache may still contain expressions that are not maximally shared. */
 void clear_instantiate_cache();
-
-void initialize_instantiate();
-void finalize_instantiate();
 }

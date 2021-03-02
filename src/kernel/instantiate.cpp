@@ -12,8 +12,9 @@ Author: Leonardo de Moura
 #include "kernel/declaration.h"
 #include "kernel/instantiate.h"
 
-static unsigned LEAN_INST_UNIV_CACHE_SIZE;
-static double g_elapsed;
+#ifndef LEAN_INST_UNIV_CACHE_SIZE
+#define LEAN_INST_UNIV_CACHE_SIZE 1023
+#endif
 
 namespace lean {
 class instantiate_univ_cache {
@@ -220,11 +221,4 @@ void clear_instantiate_cache() {
     get_type_univ_cache().clear();
     get_value_univ_cache().clear();
 }
-
-void initialize_instantiate() {
-}
-
-void finalize_instantiate() {
-}
-
 }
