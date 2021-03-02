@@ -432,7 +432,6 @@ int main(int argc, char ** argv) {
     LEAN_EMSCRIPTEN_ENV
     LEAN_EMSCRIPTEN_FS
 #endif
-    ::initializer init;
     bool make_mode          = false;
     bool export_tlean       = false;
     bool use_old_oleans     = false;
@@ -578,6 +577,13 @@ int main(int argc, char ** argv) {
         }
     }
 
+    // currently needs to be before `::initializer init`
+    // (since `init` will connect to the devin server)
+    devin_initialize(devin_addr);
+    srand(devin::unique_id());
+
+    ::initializer init;
+
     if (auto max_memory = opts.get_unsigned(get_max_memory_opt_name(),
                                             opts.get_bool("server") ? LEAN_SERVER_DEFAULT_MAX_MEMORY : LEAN_DEFAULT_MAX_MEMORY)) {
         set_max_memory_megabyte(max_memory);
@@ -611,8 +617,6 @@ int main(int argc, char ** argv) {
         return 0;
     }
 #endif
-
-    devin_initialize(devin_addr);
 
     log_tree lt;
 
