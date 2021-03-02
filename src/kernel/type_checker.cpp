@@ -869,9 +869,9 @@ certified_declaration certify_unchecked::certify_or_check(environment const & en
 }
 
 void initialize_type_checker() {
-    devin::sl::new_classifier("kernel.typechecker.self_opt", 6, 2, [](std::vector<float> const &) { return 1; });
+    devin::sl::new_classifier("kernel.type_checker.self_opt", 6, 2, [](std::vector<float> const &) { return 1; });
 
-    devin::rl::new_agent("kernel.typechecker.is_def_eq", 8, 3, 0.99,
+    devin::rl::new_agent("kernel.type_checker.is_def_eq", 8, 3, 0.99,
                          [](std::vector<float> const & features) {
                              float diff = features[0];
                              if (diff > 0) {
