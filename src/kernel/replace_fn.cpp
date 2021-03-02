@@ -133,7 +133,7 @@ expr replace(expr const & e, std::function<optional<expr>(expr const &, unsigned
 
 void initialize_replace_fn() {
     devin::optim::new_optimizer("kernel.replace_fn");
-    LEAN_DEFAULT_REPLACE_CACHE_CAPACITY = devin::optim::choose_int("kernel.replace_fn", "cache_capacity", 2, 32, []() { return 8; }) * 1024;
+    LEAN_DEFAULT_REPLACE_CACHE_CAPACITY = devin::optim::choose_int("kernel.replace_fn", "cache_capacity", 2, 32, []() { return 2 + rand() % 30; }) * 1024;
     g_elapsed = 0.0;
 }
 
