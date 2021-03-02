@@ -609,7 +609,7 @@ static std::vector<float> compare_features(expr const & t1, expr const & t2, red
 }
 
 int compare(expr const & t1, expr const & t2, reducibility_hints const & h1, reducibility_hints const & h2) {
-    if (h1.m_kind == h2.m_kind && h1.m_kind == reducibility_hints::Regular) {
+    if (h1.get_kind() == h2.get_kind() && h1.get_kind() == reducibility_hints::Regular) {
         return devin::rl::act("kernel.type_checker.is_def_eq", compare_features(t1, t2, h1, h2)) - 1;
     } else {
         return compare(h1, h2);
