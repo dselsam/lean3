@@ -604,7 +604,7 @@ static std::vector<float> compare_features(expr const & t1, expr const & t2, red
             t1_weight   + t2_weight,
             t1_depth    + t2_depth,
             t1_num_args + t2_num_args,
-            t1_height   + t2_height)
+            t1_height   + t2_height
     };
 }
 
