@@ -667,7 +667,7 @@ auto type_checker::lazy_delta_reduction_step(expr & t_n, expr & s_n) -> reductio
     } else if (!d_t && d_s) {
         s_n = whnf_core(*unfold_definition(s_n));
     } else {
-        int c = compare(d_t, d_s, d_t->get_hints(), d_s->get_hints());
+        int c = compare(t_n, s_n, d_t->get_hints(), d_s->get_hints());
         if (c < 0) {
             t_n = whnf_core(*unfold_definition(t_n));
         } else if (c > 0) {
