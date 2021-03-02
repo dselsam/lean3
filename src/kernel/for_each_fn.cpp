@@ -136,7 +136,7 @@ void for_each(expr const & e, std::function<bool(expr const &, unsigned)> && f) 
 
 void initialize_for_each_fn() {
     devin::optim::new_optimizer("kernel.for_each_fn");
-    LEAN_DEFAULT_FOR_EACH_CACHE_CAPACITY = devin::optim::choose_int("kernel.for_each_fn", "cache_capacity", 2, 32, []() { return 2 + rand() % 30; }) * 1024;
+    LEAN_DEFAULT_FOR_EACH_CACHE_CAPACITY = devin::optim::choose_int("kernel.for_each_fn", "cache_capacity", 2, 32, 8) * 1024;
     g_elapsed = 0.0;
 }
 
