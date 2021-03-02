@@ -199,6 +199,7 @@ static void display_help(std::ostream & out) {
     std::cout << "                     (in megabytes)\n";
     std::cout << "  --timeout=num -T   maximum number of memory allocations per task\n";
     std::cout << "                     this is a deterministic way of interrupting long running tasks\n";
+    std::cout << "  --devin=<addr>     address of devin server (host:port)\n";
 #if defined(LEAN_MULTI_THREAD)
     std::cout << "  --threads=num -j   number of threads used to process lean files\n";
     std::cout << "  --tstack=num -s    thread stack size in Kb\n";
@@ -243,6 +244,7 @@ static struct option g_long_options[] = {
     {"deps",         no_argument,       0, 'd'},
     {"test-suite",   no_argument,       0, 'e'},
     {"timeout",      optional_argument, 0, 'T'},
+    {"devin",        required_argument, 0, 'z'},
 #if defined(LEAN_JSON)
     {"json",         no_argument,       0, 'J'},
     {"path",         no_argument,       0, 'p'},
@@ -425,7 +427,6 @@ public:
 };
 
 int main(int argc, char ** argv) {
-    devin_initialize("localhost", 50051);
 
 #if defined(LEAN_EMSCRIPTEN)
     LEAN_EMSCRIPTEN_ENV
@@ -447,7 +448,7 @@ int main(int argc, char ** argv) {
 #if defined(LEAN_JSON)
     bool json_output        = false;
 #endif
-
+    std::string devin_addr  = "localhost:50051";
     standard_search_path path;
 
     options opts;
@@ -486,6 +487,9 @@ int main(int argc, char ** argv) {
             break;
         case 'x':
             export_tlean = true;
+            break;
+        case 'z':
+            devin_addr = optarg;
             break;
         case 'O':
             use_old_oleans = true;
@@ -607,6 +611,8 @@ int main(int argc, char ** argv) {
         return 0;
     }
 #endif
+
+    devin_initialize(devin_addr);
 
     log_tree lt;
 
