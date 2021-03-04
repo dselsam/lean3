@@ -577,9 +577,9 @@ int main(int argc, char ** argv) {
         }
     }
 
-    // currently needs to be before `::initializer init`
-    // (since `init` will connect to the devin server)
-    devin_initialize(devin_addr);
+    // Note: devin needs to be initialized before lean
+    // because initializing lean involves connecting to devin
+    devin::initializer _devin_init(devin_addr);
     srand(devin::unique_id());
 
     ::initializer init;
