@@ -199,7 +199,6 @@ static void display_help(std::ostream & out) {
     std::cout << "                     (in megabytes)\n";
     std::cout << "  --timeout=num -T   maximum number of memory allocations per task\n";
     std::cout << "                     this is a deterministic way of interrupting long running tasks\n";
-    std::cout << "  --devin=<addr>     address of devin server (host:port)\n";
 #if defined(LEAN_MULTI_THREAD)
     std::cout << "  --threads=num -j   number of threads used to process lean files\n";
     std::cout << "  --tstack=num -s    thread stack size in Kb\n";
@@ -244,7 +243,6 @@ static struct option g_long_options[] = {
     {"deps",         no_argument,       0, 'd'},
     {"test-suite",   no_argument,       0, 'e'},
     {"timeout",      optional_argument, 0, 'T'},
-    {"devin",        required_argument, 0, 'z'},
 #if defined(LEAN_JSON)
     {"json",         no_argument,       0, 'J'},
     {"path",         no_argument,       0, 'p'},
@@ -447,7 +445,6 @@ int main(int argc, char ** argv) {
 #if defined(LEAN_JSON)
     bool json_output        = false;
 #endif
-    std::string devin_addr  = "localhost:50051";
     standard_search_path path;
 
     options opts;
@@ -486,9 +483,6 @@ int main(int argc, char ** argv) {
             break;
         case 'x':
             export_tlean = true;
-            break;
-        case 'z':
-            devin_addr = optarg;
             break;
         case 'O':
             use_old_oleans = true;
@@ -579,8 +573,10 @@ int main(int argc, char ** argv) {
 
     // Note: devin needs to be initialized before lean
     // because initializing lean involves connecting to devin
-    devin::initializer _devin_init(devin_addr);
-    srand(devin::unique_id());
+    devin::initializer _devin_init();
+    struct timeval time;
+    gettimeofday(&time,NULL);
+    srand((time.tv_sec * 1000) + (time.tv_usec / 1000));
 
     ::initializer init;
 
