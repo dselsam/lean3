@@ -61,6 +61,13 @@ struct eqn_lemmas_modification : public modification {
         s << m_fn_name << m_sl;
     }
 
+    void textualize(tlean_exporter & x) const {
+        unsigned n_fn_name = x.export_name(m_fn_name);
+        unsigned n_id_name = x.export_name(m_sl.get_id());
+
+        x.out() << "#EQUATION " << n_fn_name << " " << n_id_name << "\n";
+    }
+
     static std::shared_ptr<modification const> deserialize(deserializer & d) {
         auto m = std::make_shared<eqn_lemmas_modification>();
         d >> m->m_fn_name >> m->m_sl;
