@@ -96,6 +96,7 @@ static name const * g_axiom_tk = nullptr;
 static name const * g_axioms_tk = nullptr;
 static name const * g_constant_tk = nullptr;
 static name const * g_constants_tk = nullptr;
+static name const * g_constant4_tk = nullptr;
 static name const * g_variable_tk = nullptr;
 static name const * g_variables_tk = nullptr;
 static name const * g_structure_tk = nullptr;
@@ -221,6 +222,7 @@ void initialize_tokens() {
     g_axioms_tk = new name{"axioms"};
     g_constant_tk = new name{"constant"};
     g_constants_tk = new name{"constants"};
+    g_constant4_tk = new name{"constant4"};
     g_variable_tk = new name{"variable"};
     g_variables_tk = new name{"variables"};
     g_structure_tk = new name{"structure"};
@@ -347,6 +349,7 @@ void finalize_tokens() {
     delete g_axioms_tk;
     delete g_constant_tk;
     delete g_constants_tk;
+    delete g_constant4_tk;
     delete g_variable_tk;
     delete g_variables_tk;
     delete g_structure_tk;
@@ -472,6 +475,7 @@ name const & get_axiom_tk() { return *g_axiom_tk; }
 name const & get_axioms_tk() { return *g_axioms_tk; }
 name const & get_constant_tk() { return *g_constant_tk; }
 name const & get_constants_tk() { return *g_constants_tk; }
+name const & get_constant4_tk() { return *g_constant4_tk; }
 name const & get_variable_tk() { return *g_variable_tk; }
 name const & get_variables_tk() { return *g_variables_tk; }
 name const & get_structure_tk() { return *g_structure_tk; }

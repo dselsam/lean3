@@ -83,18 +83,20 @@ class declaration {
            associated definitions are "untrusted". We use this feature to define tactical-definitions.
            The kernel type checker ensures trusted definitions do not use untrusted ones. */
         bool              m_trusted;
+        bool              m_constant4; // simulating lean4's constant
+
         void dealloc() { delete this; }
 
         cell(name const & n, level_param_names const & params, expr const & t, bool is_axiom, bool trusted):
             m_rc(1), m_name(n), m_params(params), m_type(t), m_theorem(is_axiom),
-            m_hints(reducibility_hints::mk_opaque()), m_trusted(trusted) {}
+            m_hints(reducibility_hints::mk_opaque()), m_trusted(trusted), m_constant4(false) {}
         cell(name const & n, level_param_names const & params, expr const & t, expr const & v,
-             reducibility_hints const & h, bool trusted):
+             reducibility_hints const & h, bool trusted, bool constant4):
             m_rc(1), m_name(n), m_params(params), m_type(t), m_theorem(false),
-            m_value(v), m_hints(h), m_trusted(trusted) {}
+            m_value(v), m_hints(h), m_trusted(trusted), m_constant4(constant4) {}
         cell(name const & n, level_param_names const & params, expr const & t, task<expr> const & v):
             m_rc(1), m_name(n), m_params(params), m_type(t), m_theorem(true),
-            m_proof(v), m_hints(reducibility_hints::mk_opaque()), m_trusted(true) {}
+            m_proof(v), m_hints(reducibility_hints::mk_opaque()), m_trusted(true), m_constant4(false) {}
     };
     cell * m_ptr;
     explicit declaration(cell * ptr);
@@ -136,11 +138,13 @@ public:
     expr const & get_value() const;
 
     reducibility_hints const & get_hints() const;
+    bool is_constant4() const;
 
     friend declaration mk_definition(name const & n, level_param_names const & params, expr const & t, expr const & v,
-                                     reducibility_hints const & hints, bool trusted);
+                                     reducibility_hints const & hints, bool trusted, bool constant4);
     friend declaration mk_definition(environment const & env, name const & n, level_param_names const & params, expr const & t,
-                                     expr const & v, bool use_conv_opt, bool trusted);
+                                     expr const & v, bool use_conv_opt, bool trusted, bool constant4);
+
     friend declaration mk_theorem(name const &, level_param_names const &, expr const &, task<expr> const &);
     friend declaration mk_axiom(name const & n, level_param_names const & params, expr const & t);
     friend declaration mk_constant_assumption(name const & n, level_param_names const & params, expr const & t, bool trusted);
@@ -151,9 +155,9 @@ inline optional<declaration> some_declaration(declaration const & o) { return op
 inline optional<declaration> some_declaration(declaration && o) { return optional<declaration>(std::forward<declaration>(o)); }
 
 declaration mk_definition(name const & n, level_param_names const & params, expr const & t, expr const & v,
-                          reducibility_hints const & hints, bool trusted = true);
+                          reducibility_hints const & hints, bool trusted = true, bool constant4 = false);
 declaration mk_definition(environment const & env, name const & n, level_param_names const & params, expr const & t, expr const & v,
-                          bool use_conv_opt = true, bool trusted = true);
+                          bool use_conv_opt = true, bool trusted = true, bool constant4 = false);
 declaration mk_theorem(name const & n, level_param_names const & params, expr const & t, expr const & v);
 declaration mk_theorem(name const & n, level_param_names const & params, expr const & t, task<expr> const & v);
 declaration mk_axiom(name const & n, level_param_names const & params, expr const & t);

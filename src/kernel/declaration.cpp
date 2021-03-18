@@ -74,9 +74,14 @@ expr const & declaration::get_value() const {
 }
 reducibility_hints const & declaration::get_hints() const { return m_ptr->m_hints; }
 
+bool declaration::is_constant4() const {
+    lean_assert(is_definition());
+    return m_ptr->m_constant4;
+}
+
 declaration mk_definition(name const & n, level_param_names const & params, expr const & t, expr const & v,
-                          reducibility_hints const & h, bool trusted) {
-    return declaration(new declaration::cell(n, params, t, v, h, trusted));
+                          reducibility_hints const & h, bool trusted, bool constant4) {
+    return declaration(new declaration::cell(n, params, t, v, h, trusted, constant4));
 }
 static unsigned get_max_height(environment const & env, expr const & v) {
     unsigned h = 0;
@@ -92,9 +97,9 @@ static unsigned get_max_height(environment const & env, expr const & v) {
 }
 
 declaration mk_definition(environment const & env, name const & n, level_param_names const & params, expr const & t,
-                          expr const & v, bool use_self_opt, bool trusted) {
+                          expr const & v, bool use_self_opt, bool trusted, bool constant4) {
     unsigned h = get_max_height(env, v);
-    return mk_definition(n, params, t, v, reducibility_hints::mk_regular(h+1, use_self_opt), trusted);
+    return mk_definition(n, params, t, v, reducibility_hints::mk_regular(h+1, use_self_opt), trusted, constant4);
 }
 declaration mk_theorem(name const & n, level_param_names const & params, expr const & t, task<expr> const & v) {
     return declaration(new declaration::cell(n, params, t, v));

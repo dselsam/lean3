@@ -257,7 +257,7 @@ declare_definition(parser_info const & p, environment const & env, decl_cmd_kind
         (kind == decl_cmd_kind::Theorem ?
          mk_theorem(c_real_name, to_list(lp_names), type, *val) :
          (is_abbrev ? mk_definition(c_real_name, to_list(lp_names), type, *val, reducibility_hints::mk_abbreviation(), is_trusted) :
-          mk_definition(new_env, c_real_name, to_list(lp_names), type, *val, use_conv_opt, is_trusted)));
+          mk_definition(new_env, c_real_name, to_list(lp_names), type, *val, use_conv_opt, is_trusted, kind == decl_cmd_kind::Constant4)));
     auto cdef         = check(p, new_env, c_name, def, pos);
     new_env           = module::add(new_env, cdef);
 

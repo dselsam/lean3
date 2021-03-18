@@ -1666,7 +1666,9 @@ bool type_context_old::process_postponed(scope const & s) {
 optional<declaration> type_context_old::is_delta(expr const & e) {
     expr const & f = get_app_fn(e);
     if (is_constant(f)) {
-        return get_decl(const_name(f));
+        declaration d = get_decl(const_name(f));
+        if (d.is_constant4()) return none_declaration();
+        else return d;
     } else {
         return none_declaration();
     }

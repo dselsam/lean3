@@ -12,9 +12,17 @@ universes u v
 /- the axiom -/
 axiom choice {α : Sort u} : nonempty α → α
 
-@[irreducible] noncomputable def indefinite_description {α : Sort u} (p : α → Prop)
-  (h : ∃ x, p x) : {x // p x} :=
-choice $ let ⟨x, px⟩ := h in ⟨⟨x, px⟩⟩
+noncomputable constant4 indefinite_description_impl :
+  Σ (ϕ : {α : Sort u} (p : α → Prop) (h : ∃ x, p x) : {x // p x}),
+    ∀ {α : Sort u} (p : α → Prop) (h : ∃ x, p x), ϕ p h = choice $ let ⟨x, px⟩ := h in ⟨⟨x, px⟩⟩ :=
+  ⟨λ {α : Sort u} (p : α → Prop) (h : ∃ x, p x), choice $ let ⟨x, px⟩ := h in ⟨⟨x, px⟩⟩, rfl⟩
+
+noncomputable def indefinite_description {α : Sort u} (p : α → Prop) (h : ∃ x, p x) : {x // p x} :=
+  indefinite_description_impl.1
+
+noncomputable def indefinite_description.equations._eqn_1 {α : Sort u} (p : α → Prop) (h : ∃ x, p x) :
+indefinite_description p h = choice $ let ⟨x, px⟩ := h in ⟨⟨x, px⟩⟩ :=
+  indefinite_description_impl.2
 
 noncomputable def some {α : Sort u} {p : α → Prop} (h : ∃ x, p x) : α :=
 (indefinite_description p h).val

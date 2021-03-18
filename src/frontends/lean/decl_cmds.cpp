@@ -469,6 +469,9 @@ static environment definition_cmd(parser & p, cmd_meta const & meta) {
 static environment theorem_cmd(parser & p, cmd_meta const & meta) {
     return definition_cmd_core(p, decl_cmd_kind::Theorem, meta);
 }
+static environment constant4_cmd(parser & p, cmd_meta const & meta) {
+    return definition_cmd_core(p, decl_cmd_kind::Constant4, meta);
+}
 static environment abbreviation_cmd(parser & p, cmd_meta const & meta) {
     return definition_cmd_core(p, decl_cmd_kind::Abbreviation, meta);
 }
@@ -615,6 +618,7 @@ void register_decl_cmds(cmd_table & r) {
     add_cmd(r, cmd_info("protected",       "add new protected declaration", modifiers_cmd, false));
     add_cmd(r, cmd_info("definition",      "add new definition", definition_cmd));
     add_cmd(r, cmd_info("theorem",         "add new theorem", theorem_cmd));
+    add_cmd(r, cmd_info("constant4",       "add new opaque lean4-style constant", constant4_cmd));
     add_cmd(r, cmd_info("instance",        "add new instance", instance_cmd));
     add_cmd(r, cmd_info("abbreviation",    "add new abbreviation", abbreviation_cmd));
     add_cmd(r, cmd_info("example",         "add new example", example_cmd));

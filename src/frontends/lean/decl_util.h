@@ -15,7 +15,7 @@ class parser_info;
 class dummy_def_parser;
 class elaborator;
 
-enum class decl_cmd_kind { Theorem, Definition, Example, Instance, Var, Abbreviation };
+enum class decl_cmd_kind { Theorem, Definition, Example, Instance, Var, Abbreviation, Constant4 };
 
 struct decl_modifiers {
     bool m_is_private{false};
