@@ -207,8 +207,8 @@ meta def in_current_file (env : environment) (n : name) : bool :=
 
 meta def is_definition (env : environment) (n : name) : bool :=
 match env.get n with
-| exceptional.success (declaration.defn _ _ _ _ _ _) := tt
-| _                                                  := ff
+| exceptional.success (declaration.defn _ _ _ _ _ _ _) := tt
+| _                                                    := ff
 end
 
 end environment

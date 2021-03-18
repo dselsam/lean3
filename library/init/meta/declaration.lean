@@ -45,8 +45,8 @@ inductive reducibility_hints
 
 /-- Reflect a C++ declaration object. The VM replaces it with the C++ implementation. -/
 meta inductive declaration
-/- definition: name, list universe parameters, type, value, is_trusted -/
-| defn : name → list name → expr → expr → reducibility_hints → bool → declaration
+/- definition: name, list universe parameters, type, value, is_trusted, is_constant4 -/
+| defn : name → list name → expr → expr → reducibility_hints → bool → bool → declaration
 /- theorem: name, list universe parameters, type, value (remark: theorems are always trusted) -/
 | thm  : name → list name → expr → task expr → declaration
 /- constant assumption: name, list universe parameters, type, is_trusted -/
@@ -57,69 +57,72 @@ meta inductive declaration
 open declaration
 
 meta def mk_definition (n : name) (ls : list name) (v : expr) (e : expr) : declaration :=
-defn n ls v e (reducibility_hints.regular 1 tt) tt
+defn n ls v e (reducibility_hints.regular 1 tt) tt ff
+
+meta def mk_constant4 (n : name) (ls : list name) (v : expr) (e : expr) : declaration :=
+defn n ls v e (reducibility_hints.regular 1 tt) tt tt
 
 namespace declaration
 
 meta def to_name : declaration → name
-| (defn n _ _ _ _ _) := n
-| (thm n _ _ _)      := n
-| (cnst n _ _ _)     := n
-| (ax n _ _)         := n
+| (defn n _ _ _ _ _ _) := n
+| (thm n _ _ _)        := n
+| (cnst n _ _ _)       := n
+| (ax n _ _)           := n
 
 meta def univ_params : declaration → list name
-| (defn _ ls _ _ _ _) := ls
-| (thm _ ls _ _)      := ls
-| (cnst _ ls _ _)     := ls
-| (ax _ ls _)         := ls
+| (defn _ ls _ _ _ _ _) := ls
+| (thm _ ls _ _)        := ls
+| (cnst _ ls _ _)       := ls
+| (ax _ ls _)           := ls
 
 meta def type : declaration → expr
-| (defn _ _ t _ _ _) := t
-| (thm _ _ t _)      := t
-| (cnst _ _ t _)     := t
-| (ax _ _ t)         := t
+| (defn _ _ t _ _ _ _) := t
+| (thm _ _ t _)        := t
+| (cnst _ _ t _)       := t
+| (ax _ _ t)           := t
 
 meta def value : declaration → expr
-| (defn _ _ _ v _ _) := v
-| (thm _ _ _ v)      := v.get
-| _                  := default expr
+| (defn _ _ _ v _ _ _) := v
+| (thm _ _ _ v)        := v.get
+| _                    := default expr
 
 meta def value_task : declaration → task expr
-| (defn _ _ _ v _ _) := task.pure v
-| (thm _ _ _ v)      := v
-| _                  := task.pure (default expr)
+| (defn _ _ _ v _ _ _) := task.pure v
+| (thm _ _ _ v)        := v
+| _                    := task.pure (default expr)
 
 meta def is_trusted : declaration → bool
-| (defn _ _ _ _ _ t) := t
-| (cnst _ _ _ t)     := t
-| _                  := tt
+| (defn _ _ _ _ _ t _) := t
+| (cnst _ _ _ t)       := t
+| _                    := tt
 
 meta def update_type : declaration → expr → declaration
-| (defn n ls t v h tr) new_t := defn n ls new_t v h tr
-| (thm n ls t v)       new_t := thm n ls new_t v
-| (cnst n ls t tr)     new_t := cnst n ls new_t tr
-| (ax n ls t)          new_t := ax n ls new_t
+| (defn n ls t v h tr c4) new_t := defn n ls new_t v h tr c4
+| (thm n ls t v)          new_t := thm n ls new_t v
+| (cnst n ls t tr)        new_t := cnst n ls new_t tr
+| (ax n ls t)             new_t := ax n ls new_t
 
 meta def update_name : declaration → name → declaration
-| (defn n ls t v h tr) new_n := defn new_n ls t v h tr
-| (thm n ls t v)       new_n := thm new_n ls t v
-| (cnst n ls t tr)     new_n := cnst new_n ls t tr
-| (ax n ls t)          new_n := ax new_n ls t
+| (defn n ls t v h tr c4) new_n := defn new_n ls t v h tr c4
+| (thm n ls t v)          new_n := thm new_n ls t v
+| (cnst n ls t tr)        new_n := cnst new_n ls t tr
+| (ax n ls t)             new_n := ax new_n ls t
 
 meta def update_value : declaration → expr → declaration
-| (defn n ls t v h tr) new_v := defn n ls t new_v h tr
-| (thm n ls t v)       new_v := thm n ls t (task.pure new_v)
-| d                    new_v := d
+| (defn n ls t v h tr c4) new_v := defn n ls t new_v h tr c4
+| (thm n ls t v)          new_v := thm n ls t (task.pure new_v)
+| d                       new_v := d
 
 meta def update_value_task : declaration → task expr → declaration
-| (defn n ls t v h tr) new_v := defn n ls t new_v.get h tr
-| (thm n ls t v)       new_v := thm n ls t new_v
-| d                    new_v := d
+| (defn n ls t v h tr c4) new_v := defn n ls t new_v.get h tr c4
+| (thm n ls t v)          new_v := thm n ls t new_v
+| d                       new_v := d
 
 meta def map_value : declaration → (expr → expr) → declaration
-| (defn n ls t v h tr) f := defn n ls t (f v) h tr
-| (thm n ls t v)       f := thm n ls t (task.map f v)
-| d                    f := d
+| (defn n ls t v h tr c4) f := defn n ls t (f v) h tr c4
+| (thm n ls t v)          f := thm n ls t (task.map f v)
+| d                       f := d
 
 meta def to_definition : declaration → declaration
 | (cnst n ls t tr) := defn n ls t (default expr) reducibility_hints.abbrev tr
