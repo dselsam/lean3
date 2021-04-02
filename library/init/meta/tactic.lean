@@ -1896,4 +1896,19 @@ meta def run_simple {α} : tactic_state → tactic α → option α
           | (interaction_monad.result.exception _ _ _) := none
           end
 
+@[reducible] def id_tag.{u} {α : Sort u} (tag : string) (a : α) : α := a
+
+meta def mk_id_tag (tag : string) (e : expr) : tactic expr := mk_app `id_tag [reflect tag, e]
+
+meta def solve_with_tag (tag : string) (tac : tactic unit) : tactic unit := do
+  (g::gs) ← get_goals
+  type ← infer_type g
+  proxy ← mk_mvar type
+  set_goals [proxy]
+  tac
+  pf ← instantiate_mvars proxy
+  pf ← mk_id_tag tag pf
+  is_def_eq g pf
+  set_goals gs
+
 end tactic

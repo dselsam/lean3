@@ -286,8 +286,12 @@ structure simp_config :=
    The parameter `to_unfold` specifies definitions that should be delta-reduced,
    and projection applications that should be unfolded.
 -/
+meta constant simplify_no_tag (s : simp_lemmas) (to_unfold : list name := []) (e : expr) (cfg : simp_config := {}) (r : name := `eq)
+                              (discharger : tactic unit := failed) : tactic (expr × expr × name_set)
+
 meta constant simplify (s : simp_lemmas) (to_unfold : list name := []) (e : expr) (cfg : simp_config := {}) (r : name := `eq)
-                       (discharger : tactic unit := failed) : tactic (expr × expr × name_set)
+                       (discharger : tactic unit := failed) : tactic (expr × expr × name_set) :=
+  solve_with_tag "simp" (simplify s to_unfold e cfg r discharger)
 
 meta def simp_target (s : simp_lemmas) (to_unfold : list name := []) (cfg : simp_config := {}) (discharger : tactic unit := failed) : tactic name_set :=
 do t ← target >>= instantiate_mvars,
@@ -339,7 +343,7 @@ An easy way to do this is to call `tactic.capture (do ...)` in the parts of `pre
 Additionally, `ext_simplify_core` does not propagate changes made to the tactic state by `pre` and `post.
 If it is desirable to propagate changes to the tactic state in addition to errors, use `tactic.resume` instead of `tactic.unwrap`.
 -/
-meta constant ext_simplify_core
+meta constant ext_simplify_core_no_tag
   {α : Type}
   (a : α)
   (c : simp_config)
@@ -349,6 +353,17 @@ meta constant ext_simplify_core
   (post : α → simp_lemmas  → name → option expr → expr → tactic (α × expr × option expr × bool))
   (r : name) :
   expr → tactic (α × expr × expr)
+
+meta constant ext_simplify_core
+  {α : Type}
+  (a : α)
+  (c : simp_config)
+  (s : simp_lemmas)
+  (discharger : α → tactic α)
+  (pre : α → simp_lemmas → name → option expr → expr → tactic (α × expr × option expr × bool))
+  (post : α → simp_lemmas  → name → option expr → expr → tactic (α × expr × option expr × bool))
+  (r : name) :
+  expr → tactic (α × expr × expr) := solve_with_tag "ext_simplify" (ext_simplify_core a c s discharger pre post r)
 
 private meta def is_equation : expr → bool
 | (expr.pi n bi d b) := is_equation b
