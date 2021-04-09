@@ -1368,14 +1368,20 @@ end
 /--
 This tactic applies to a goal whose target has the form `t ~ u` where `~` is a reflexive relation, that is, a relation which has a reflexivity lemma tagged with the attribute `[refl]`. The tactic checks whether `t` and `u` are definitionally equal and then solves the goal.
 -/
-meta def reflexivity : tactic unit :=
-tactic.reflexivity
+meta def reflexivity (md : transparency := semireducible) : tactic unit :=
+tactic.reflexivity md
 
 /--
 Shorter name for the tactic `reflexivity`.
 -/
-meta def refl : tactic unit :=
-tactic.reflexivity
+meta def refl (md : transparency := semireducible) : tactic unit :=
+tactic.reflexivity md
+
+/--
+Convenience `refl` variant for solving goals that require well-founded computation.
+-/
+meta def wfrefl : tactic unit :=
+refl transparency.all
 
 /--
 This tactic applies to a goal whose target has the form `t ~ u` where `~` is a symmetric relation, that is, a relation which has a symmetry lemma tagged with the attribute `[symm]`. It replaces the target with `u ~ t`.
