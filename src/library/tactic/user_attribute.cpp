@@ -66,12 +66,16 @@ public:
     user_attribute(name const & id, name const & d, char const * descr, after_set_proc const & after_set,
                    before_unset_proc const & before_unset) : typed_attribute(id, descr, after_set, before_unset), m_decl(d) {}
 
-    attr_data_ptr parse_data(abstract_parser & p) const override final {
+    attr_data_ptr parse_data(abstract_parser & p, ast_data & parent) const override final {
         lean_assert(dynamic_cast<parser *>(&p));
         auto & p2 = *static_cast<parser *>(&p);
         type_context_old ctx(p2.env(), p2.get_options());
         expr parser = mk_app(ctx, get_user_attribute_parse_reflect_name(), 3, mk_constant(m_decl));
+        auto& data = p2.new_ast("parse", p.pos(), m_decl);
         expr param = to_expr(run_parser(p2, parser));
+        param.set_tag(nulltag);
+        p2.set_ast_pexpr(data.m_id, param);
+        parent.push(data.m_id);
         return attr_data_ptr(new user_attribute_data(param));
     }
 };

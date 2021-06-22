@@ -16,6 +16,7 @@ class parser;
 
 struct cmd_meta {
     decl_attributes       m_attrs;
+    ast_id                m_modifiers_id = 0;
     decl_modifiers        m_modifiers;
     optional<std::string> m_doc_string;
     cmd_meta() {}

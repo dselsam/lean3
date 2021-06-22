@@ -256,6 +256,7 @@ level mk_result_level(buffer<level> const & r_lvls) {
 
 std::tuple<expr, level_param_names> parse_local_expr(parser & p, name const & decl_name, metavar_context & mctx, bool relaxed) {
     expr e = p.parse_expr();
+    p.cmd_ast_data().push(p.get_id(e));
     bool check_unassigend = !relaxed;
     expr new_e; level_param_names ls;
     std::tie(new_e, ls) = p.elaborate(decl_name, mctx, e, check_unassigend);
@@ -310,9 +311,11 @@ char const * close_binder_string(binder_info const & bi, bool unicode) {
     else return ")";
 }
 
-pair<name, option_kind> parse_option_name(parser & p, char const * error_msg) {
+pair<name, option_kind> parse_option_name(parser & p, ast_data & parent, char const * error_msg) {
     auto id_pos  = p.pos();
-    name id = p.check_id_next(error_msg, break_at_pos_exception::token_context::option);
+    ast_id id_ast; name id;
+    std::tie(id_ast, id) = p.check_id_next(error_msg, break_at_pos_exception::token_context::option);
+    parent.push(id_ast);
     option_declarations decls = get_option_declarations();
     auto it = decls.find(id);
     if (!it) {
@@ -368,17 +371,18 @@ static bool is_tactic_unit(environment const & env, expr const & c) {
     return tc.is_def_eq(tc.infer(c), mk_tactic_unit());
 }
 
-expr parse_auto_param(parser & p, expr const & type) {
+pair<ast_id, expr> parse_auto_param(parser & p, expr const & type) {
     p.next();
     auto pos      = p.pos();
-    name tac_id   = p.check_decl_id_next("invalid auto_param, identifier expected");
+    ast_id id; name tac_id;
+    std::tie(id, tac_id) = p.check_decl_id_next("invalid auto_param, identifier expected");
     if (get_auto_param_check_exists(p.get_options())) {
-        expr tac_expr = p.id_to_expr(tac_id, pos, true);
+        expr tac_expr = p.id_to_expr(tac_id, p.get_ast(id), true);
         if (!is_tactic_unit(p.env(), tac_expr))
             throw parser_error(sstream() << "invalid auto_param, '" << tac_id << "' must have type (tactic unit)", pos);
-        return mk_auto_param(type, const_name(tac_expr));
+        return {id, mk_auto_param(type, const_name(tac_expr))};
     } else {
-        return mk_auto_param(type, tac_id);
+        return {id, mk_auto_param(type, tac_id)};
     }
 }
 

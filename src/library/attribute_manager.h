@@ -22,7 +22,7 @@ struct attr_data {
     virtual unsigned hash() const {
         return 0;
     }
-    virtual void parse(abstract_parser &) {}
+    virtual void parse(abstract_parser &, ast_data &) {}
     virtual void print(std::ostream &) {}
     virtual void textualize(tlean_exporter &) const {}
     virtual ~attr_data() {}
@@ -69,7 +69,7 @@ public:
     bool get_persistent(environment const &, name const &) const;
     virtual void get_instances(environment const &, buffer<name> &) const;
     priority_queue<name, name_quick_cmp> get_instances_by_prio(environment const &) const;
-    virtual attr_data_ptr parse_data(abstract_parser &) const;
+    virtual attr_data_ptr parse_data(abstract_parser & p, ast_data & parent) const;
 
     virtual environment unset(environment env, io_state const & ios, name const & n, bool persistent) const;
     virtual unsigned get_fingerprint(environment const & env) const;
@@ -136,9 +136,9 @@ public:
     typed_attribute(name const & id, char const * descr, after_set_proc after_set = {}, before_unset_proc before_unset = {}) :
             attribute(id, descr, after_set, before_unset) {}
 
-    virtual attr_data_ptr parse_data(abstract_parser & p) const override {
+    virtual attr_data_ptr parse_data(abstract_parser & p, ast_data & parent) const override {
         auto data = new Data;
-        data->parse(p);
+        data->parse(p, parent);
         return attr_data_ptr(data);
     }
 
@@ -212,7 +212,7 @@ struct indices_attribute_data : public attr_data {
     void read(deserializer & d) {
         m_idxs = read_list<unsigned>(d);
     }
-    void parse(abstract_parser & p) override;
+    void parse(abstract_parser & p, ast_data & parent) override;
     virtual void print(std::ostream & out) override {
         for (auto p : m_idxs) {
             out << " " << p + 1;
@@ -247,14 +247,15 @@ struct key_value_data : public attr_data {
         d >> m_library;
     }
 
-    void parse(abstract_parser & p) override {
+    void parse(abstract_parser & p, ast_data & parent) override {
         std::cout << "in extern parser" << std::endl;
-        std::string n = p.parse_string_lit();
-        std::string l = p.parse_string_lit();
-        std::cout << "link symbol: " << n << std::endl;
-        std::cout << "library symbol: " << l << std::endl;
-        this->m_symbol = n;
-        this->m_library = l;
+        auto n = p.parse_string_lit();
+        auto l = p.parse_string_lit();
+        parent.push(n.first).push(l.first);
+        std::cout << "link symbol: " << n.second << std::endl;
+        std::cout << "library symbol: " << l.second << std::endl;
+        this->m_symbol = n.second;
+        this->m_library = l.second;
     }
 
     virtual void print(std::ostream & out) override {

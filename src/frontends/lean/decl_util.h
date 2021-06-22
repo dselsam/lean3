@@ -128,7 +128,7 @@ bool used_match_idx();
            {u_1 ... u_k}
 
     The universe parameters are automatically added to the parser scope. */
-bool parse_univ_params(parser & p, buffer<name> & lp_names);
+ast_id parse_univ_params(parser & p, buffer<name> & lp_names);
 
 /** \brief Parse a declaration header of the form
 
@@ -140,7 +140,7 @@ bool parse_univ_params(parser & p, buffer<name> & lp_names);
     Both lp_names and params are added to the parser scope.
 
     \remark Caller is responsible for using: parser::local_scope scope2(p, env); */
-expr parse_single_header(parser & p, declaration_name_scope & s, buffer <name> & lp_names, buffer <expr> & params,
+expr parse_single_header(parser & p, ast_data & parent, declaration_name_scope & s, buffer <name> & lp_names, buffer <expr> & params,
                          bool is_example = false, bool is_instance = false);
 
 expr parse_single_header(dummy_def_parser & p, declaration_name_scope & s, buffer <name> & lp_names, buffer <expr> & params,
@@ -165,7 +165,7 @@ void parse_mutual_header(parser & p, buffer <name> & lp_names, buffer <expr> & c
          with <attrs> id : type
 
     The result is (type, attrs). */
-pair<expr, decl_attributes> parse_inner_header(parser & p, name const & c_expected);
+pair<expr, decl_attributes> parse_inner_header(parser & p, ast_data & parent, name const & c_expected);
 
 /** \brief Add section/namespace parameters (and universes) used by params and all_exprs.
     We also add parameters included using the command 'include'.

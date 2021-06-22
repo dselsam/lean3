@@ -51,7 +51,7 @@ vm_obj run_parser(parser & p, expr const & spec, buffer<vm_obj> const & args, bo
     return lean_parser::get_success_value(r);
 }
 
-expr parse_interactive_param(parser & p, expr const & param_ty) {
+expr parse_interactive_param(parser & p, ast_data & parent, expr const & param_ty) {
     lean_assert(is_app_of(param_ty, get_interactive_parse_name()));
     buffer<expr> param_args;
     get_app_args(param_ty, param_args);
@@ -63,12 +63,15 @@ expr parse_interactive_param(parser & p, expr const & param_ty) {
     try {
         expr pr = mk_app({mk_constant(get_lean_parser_reflectable_expr_name()),
             param_args[0], param_args[1], param_args[2]});
+        auto& data = p.new_ast("parse", p.pos());
         expr r = to_expr(run_parser(p, pr));
-        if (is_app_of(r, get_expr_subst_name())) {
-            return r; // HACK
-        } else {
-            return mk_as_is(r);
+        if (!is_app_of(r, get_expr_subst_name())) { // HACK
+            r = mk_as_is(r);
         }
+        r.set_tag(nulltag);
+        p.set_ast_pexpr(data.m_id, r);
+        parent.push(data.m_id);
+        return r;
     } catch (exception & ex) {
         if (!p.has_error_recovery()) throw;
         p.mk_message(ERROR).set_exception(ex).report();
@@ -172,7 +175,7 @@ vm_obj vm_parser_ident(vm_obj const & o) {
     auto const & s = lean_parser::to_state(o);
     TRY;
         auto _ = s.m_p->no_error_recovery_scope();
-        name ident = s.m_p->check_id_next("identifier expected");
+        name ident = s.m_p->check_id_next("identifier expected").second;
         return lean_parser::mk_success(to_obj(ident), s);
     CATCH;
 }
@@ -181,7 +184,7 @@ vm_obj vm_parser_small_nat(vm_obj const & o) {
     auto const & s = lean_parser::to_state(o);
     TRY;
         auto _ = s.m_p->no_error_recovery_scope();
-        unsigned n = s.m_p->parse_small_nat();
+        unsigned n = s.m_p->parse_small_nat().second;
         return lean_parser::mk_success(mk_vm_nat(n), s);
     CATCH;
 }
@@ -306,7 +309,7 @@ vm_obj vm_parser_itactic_reflected(vm_obj const & o) {
         metavar_context mctx;
         auto _ = s.m_p->no_error_recovery_scope();
 
-        expr e = parse_nested_interactive_tactic(*s.m_p, get_tactic_name(), true);
+        expr e = parse_nested_interactive_tactic(*s.m_p, nullptr, get_tactic_name(), true);
         vm_obj r = to_obj(s.m_p->elaborate({}, mctx, e, false).first);
         r = mk_vm_constructor(0, r, r);
         return lean_parser::mk_success(r, s);
@@ -404,7 +407,7 @@ static vm_obj interactive_parse_binders(vm_obj const & vm_rbp, vm_obj const & vm
     auto s = lean_parser::to_state(vm_s);
     TRY;
         buffer<expr> binders;
-        s.m_p->parse_binders(binders, to_unsigned(vm_rbp));
+        s.m_p->parse_binders(nullptr, binders, to_unsigned(vm_rbp));
         return lean_parser::mk_success(to_obj(binders), s);
     CATCH;
 }

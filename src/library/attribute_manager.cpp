@@ -12,6 +12,7 @@ Author: Leonardo de Moura
 #include "util/sstream.h"
 #include "library/attribute_manager.h"
 #include "library/scoped_ext.h"
+#include "frontends/lean/parser.h"
 
 namespace lean {
 template class typed_attribute<indices_attribute_data>;
@@ -253,18 +254,19 @@ priority_queue<name, name_quick_cmp> attribute::get_instances_by_prio(environmen
     return q;
 }
 
-attr_data_ptr attribute::parse_data(abstract_parser &) const {
+attr_data_ptr attribute::parse_data(abstract_parser &, ast_data &) const {
     return get_default_attr_data();
 }
 
-void indices_attribute_data::parse(abstract_parser & p) {
+void indices_attribute_data::parse(abstract_parser & p, ast_data & parent) {
     buffer<unsigned> vs;
     while (p.curr_is_numeral()) {
         auto pos = p.pos();
-        unsigned v = p.parse_small_nat();
-        if (v == 0)
+        auto v = p.parse_small_nat();
+        parent.push(v.first);
+        if (v.second == 0)
             throw parser_error("invalid attribute parameter, value must be positive", pos);
-        vs.push_back(v - 1);
+        vs.push_back(v.second - 1);
     }
     m_idxs = to_list(vs);
 }

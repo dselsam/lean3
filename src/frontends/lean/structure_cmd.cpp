@@ -314,13 +314,16 @@ struct structure_cmd_fn {
     void parse_decl_name() {
         m_name_pos = m_p.pos();
         buffer<name> ls_buffer;
-        if (parse_univ_params(m_p, ls_buffer)) {
+        auto id = parse_univ_params(m_p, ls_buffer);
+        auto& data = m_p.cmd_ast_data().push(id);
+        if (id) {
             m_explicit_universe_params = true;
             m_level_names.append(ls_buffer);
         } else {
             m_explicit_universe_params = false;
         }
-        m_given_name = m_p.check_decl_id_next("invalid 'structure', identifier expected");
+        std::tie(id, m_given_name) = m_p.check_decl_id_next("invalid 'structure', identifier expected");
+        data.push(id);
         if (is_private()) {
             std::tie(m_env, m_private_prefix) = mk_private_prefix(m_env);
             m_name = m_private_prefix + m_given_name;
@@ -332,11 +335,13 @@ struct structure_cmd_fn {
 
     /** \brief Parse structure parameters */
     void parse_params() {
+        auto& bis = m_p.new_ast("binders", m_p.pos());
+        m_p.cmd_ast_data().push(bis.m_id);
         if (!m_p.curr_is_token(get_extends_tk()) && !m_p.curr_is_token(get_assign_tk()) &&
             !m_p.curr_is_token(get_colon_tk())) {
             unsigned rbp = 0;
             bool allow_default = true;
-            m_p.parse_binders(m_params, rbp, allow_default);
+            m_p.parse_binders(&bis, m_params, rbp, allow_default);
         }
         for (expr const & l : m_params)
             m_p.add_local(l);
@@ -377,18 +382,24 @@ struct structure_cmd_fn {
 
     /** \brief Parse optional extends clause */
     void parse_extends() {
+        ast_id extends_id = 0;
         if (m_p.curr_is_token(get_extends_tk())) {
+            auto& exts = m_p.new_ast(get_extends_tk(), m_p.pos());
+            extends_id = exts.m_id;
             m_p.next();
             while (true) {
                 auto pos = m_p.pos();
-                bool is_private_parent = false;
+                auto& ast = m_p.new_ast("parent", pos);
+                exts.push(ast.m_id);
+                ast_id is_private_parent = 0;
                 if (m_p.curr_is_token(get_private_tk())) {
+                    is_private_parent = m_p.new_ast(get_private_tk(), pos).m_id;
                     m_p.next();
-                    is_private_parent  = true;
                 }
-                pair<optional<name>, expr> qparent = m_p.parse_qualified_expr();
-                m_parent_refs.push_back(qparent.first);
-                expr const & parent = qparent.second;
+                ast_id q_id; optional<name> q; expr parent;
+                std::tie(q_id, q, parent) = m_p.parse_qualified_expr();
+                ast.push(is_private_parent).push(q_id).push(m_p.get_id(parent));
+                m_parent_refs.push_back(q);
                 m_parents.push_back(parent);
                 m_private_parents.push_back(is_private_parent);
                 name const & parent_name = check_parent(parent);
@@ -401,13 +412,17 @@ struct structure_cmd_fn {
                         throw parser_error("invalid 'structure' extends, parent structure seems to be ill-formed", pos);
                     intro_type = binding_body(intro_type);
                 }
+                ast_id renames_id = 0;
                 m_renames.push_back(rename_vector());
                 if (!m_subobjects && m_p.curr_is_token(get_renaming_tk())) {
+                    auto& ast1 = m_p.new_ast(get_renaming_tk(), m_p.pos());
+                    renames_id = ast1.m_id;
                     m_p.next();
                     rename_vector & v = m_renames.back();
                     while (m_p.curr_is_identifier()) {
                         auto from_pos = m_p.pos();
                         name from_id  = m_p.get_name_val();
+                        ast_id from_ast = m_p.new_ast("ident", from_pos, from_id).m_id;
                         if (std::find_if(v.begin(), v.end(),
                                          [&](pair<name, name> const & p) { return p.first == from_id; }) != v.end())
                             throw parser_error(sstream() << "invalid 'structure' renaming, a rename from '" <<
@@ -415,17 +430,21 @@ struct structure_cmd_fn {
                         check_from_rename(parent_name, intro_type, from_id, from_pos);
                         m_p.next();
                         m_p.check_token_next(get_arrow_tk(), "invalid 'structure' renaming, '->' expected");
-                        name to_id = m_p.check_id_next("invalid 'structure' renaming, identifier expected");
+                        ast_id to_ast; name to_id;
+                        std::tie(to_ast, to_id) = m_p.check_id_next("invalid 'structure' renaming, identifier expected");
                         if (from_id == to_id)
                             throw parser_error(sstream() << "invalid 'structure' renaming, redundant rename", from_pos);
+                        ast1.push(m_p.new_ast(get_arrow_tk(), from_pos).push(from_ast).push(to_ast).m_id);
                         v.emplace_back(from_id, to_id);
                     }
                 }
+                ast.push(renames_id);
                 if (!m_p.curr_is_token(get_comma_tk()))
                     break;
                 m_p.next();
             }
         }
+        m_p.cmd_ast_data().push(extends_id);
     }
 
     /** \brief Parse resultant universe */
@@ -434,6 +453,7 @@ struct structure_cmd_fn {
         if (m_p.curr_is_token(get_colon_tk())) {
             m_p.next();
             m_type = m_p.parse_expr();
+            m_p.cmd_ast_data().push(m_p.get_id(m_type));
             while (is_annotation(m_type))
                 m_type = get_annotation_arg(m_type);
             if (!is_sort(m_type))
@@ -457,6 +477,7 @@ struct structure_cmd_fn {
         } else {
             m_infer_result_universe = true;
             m_type = m_p.save_pos(mk_sort(mk_level_placeholder()), pos);
+            m_p.cmd_ast_data().push(0);
         }
     }
 
@@ -795,12 +816,16 @@ struct structure_cmd_fn {
         }
     }
 
-    void parse_field_block(binder_info const & bi) {
+    ast_id parse_field_block(binder_info const & bi) {
         buffer<pair<pos_info, name>> names;
         auto start_pos = m_p.pos();
+        auto& vars = m_p.new_ast("vars", start_pos);
+        auto& ast = m_p.new_ast(name("field").append_after(bi.hash()), start_pos).push(vars.m_id);
         while (m_p.curr_is_identifier()) {
             auto p = m_p.pos();
-            auto n = m_p.check_atomic_id_next("invalid field, atomic identifier expected");
+            ast_id id; name n;
+            std::tie(id, n) = m_p.check_atomic_id_next("invalid field, atomic identifier expected");
+            vars.push(id);
             if (is_internal_subobject_field(n))
                 throw parser_error(sstream() << "invalid field name '" << n << "', identifiers starting with '_' are reserved to the system", p);
             names.emplace_back(p, n);
@@ -810,34 +835,51 @@ struct structure_cmd_fn {
 
         expr type;
         optional<expr> default_value;
+        ast_id& kind_id = ast.push(0).m_children.back();
         implicit_infer_kind kind = implicit_infer_kind::RelaxedImplicit;
         {
             parser::local_scope scope(m_p);
             buffer<expr> params;
             if (names.size() == 1) {
-                m_p.parse_optional_binders(params, kind);
+                auto& bis = m_p.new_ast("binders", m_p.pos());
+                m_p.parse_optional_binders(&bis, params, kind_id, kind);
+                ast.push(bis.m_id);
                 for (expr const & param : params)
                     m_p.add_local(param);
+            } else {
+                ast.push(0);
             }
 
             if (m_p.curr_is_token(get_assign_tk())) {
+                auto& ast1 = m_p.new_ast(get_assign_tk(), m_p.pos());
+                ast.push(0).push(ast1.m_id);
                 type = m_p.save_pos(mk_expr_placeholder(), m_p.pos());
                 m_p.next();
                 default_value = m_p.parse_expr();
+                ast1.push(m_p.get_id(*default_value));
             } else {
                 m_p.check_token_next(get_colon_tk(), "invalid field, ':' expected");
                 type = m_p.parse_expr();
+                ast.push(m_p.get_id(type));
                 if (m_p.curr_is_token(get_assign_tk())) {
+                    auto& ast1 = m_p.new_ast(get_assign_tk(), m_p.pos());
+                    ast.push(ast1.m_id);
                     m_p.next();
                     default_value = m_p.parse_expr();
+                    ast1.push(m_p.get_id(*default_value));
                 } else if (m_p.curr_is_token(get_period_tk())) {
-                    type = parse_auto_param(m_p, type);
+                    auto& ast1 = m_p.new_ast(get_period_tk(), m_p.pos());
+                    ast.push(ast1.m_id);
+                    ast_id id;
+                    std::tie(id, type) = parse_auto_param(m_p, type);
+                    ast1.push(id);
                 }
             }
             type = Pi(params, type);
             if (default_value)
                 *default_value = Fun(params, *default_value);
         }
+
 
         if (default_value && !is_explicit(bi)) {
             throw parser_error("invalid field, it is not explicit, but it has a default value", start_pos);
@@ -871,16 +913,19 @@ struct structure_cmd_fn {
                 m_fields.emplace_back(local, default_value, field_kind::new_field, kind);
             }
         }
+        return ast.m_id;
     }
 
     /** \brief Parse new fields declared in this structure */
     void parse_new_fields() {
         parser::local_scope scope(m_p);
         add_locals();
+        auto& fields = m_p.new_ast("fields", m_p.pos());
+        m_p.cmd_ast_data().push(fields.m_id);
         while (!m_p.curr_is_command_like()) {
             if (auto bi = m_p.parse_optional_binder_info()) {
-                if (!m_p.parse_local_notation_decl())
-                    parse_field_block(*bi);
+                ast_id nota = m_p.parse_local_notation_decl();
+                fields.push(nota ? nota : parse_field_block(*bi));
                 m_p.parse_close_binder_info(*bi);
             } else {
                 break;
@@ -1303,16 +1348,20 @@ struct structure_cmd_fn {
     environment operator()() {
         process_header();
         module::scope_pos_info scope(m_name_pos);
+        auto& data = m_p.cmd_ast_data();
         if (m_p.curr_is_token(get_assign_tk())) {
             m_p.check_token_next(get_assign_tk(), "invalid 'structure', ':=' expected");
             m_mk_pos = m_p.pos();
             if (m_p.curr_is_token(get_lparen_tk()) || m_p.curr_is_token(get_lcurly_tk()) ||
                 m_p.curr_is_token(get_lbracket_tk())) {
+                data.push(0);
                 m_mk_short = LEAN_DEFAULT_STRUCTURE_INTRO;
                 m_mk_infer = implicit_infer_kind::RelaxedImplicit;
             } else {
-                m_mk_short = m_p.check_atomic_id_next("invalid 'structure', atomic identifier expected");
-                m_mk_infer = parse_implicit_infer_modifier(m_p);
+                ast_id id1, id2;
+                std::tie(id1, m_mk_short) = m_p.check_atomic_id_next("invalid 'structure', atomic identifier expected");
+                std::tie(id2, m_mk_infer) = parse_implicit_infer_modifier(m_p);
+                data.push(m_p.new_ast("mk", m_mk_pos).push(id1).push(id2).m_id);
                 if (!m_p.curr_is_command_like())
                     m_p.check_token_next(get_dcolon_tk(), "invalid 'structure', '::' expected");
             }
@@ -1323,6 +1372,7 @@ struct structure_cmd_fn {
             m_mk_short = LEAN_DEFAULT_STRUCTURE_INTRO;
             m_mk_infer = implicit_infer_kind::RelaxedImplicit;
             m_mk       = m_name + m_mk_short;
+            data.push(0).push(0);
             process_empty_new_fields();
         }
         infer_resultant_universe();
@@ -1347,6 +1397,7 @@ struct structure_cmd_fn {
 
 environment structure_cmd(parser & p, cmd_meta const & meta) {
     p.next();
+    p.cmd_ast_data().push(meta.m_modifiers_id);
     return structure_cmd_fn(p, meta)();
 }
 
@@ -1356,6 +1407,7 @@ environment class_cmd(parser & p, cmd_meta const & _meta) {
     meta.m_attrs.set_attribute(p.env(), "class");
     p.next();
     if (p.curr_is_token(get_inductive_tk())) {
+        p.cmd_ast_data().m_type = "class_inductive";
         return inductive_cmd(p, meta);
     } else {
         return structure_cmd_fn(p, meta)();

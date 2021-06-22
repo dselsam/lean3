@@ -32,16 +32,19 @@ struct vm_override_attribute_data : public attr_data {
     void read(deserializer & d) {
         m_name = read_name(d);
     }
-    void parse(abstract_parser & p) override {
+    void parse(abstract_parser & p, ast_data & parent) override {
         lean_assert(dynamic_cast<parser *>(&p));
         auto & p2 = *static_cast<parser *>(&p);
         auto n = p2.check_constant_next("not a constant");
-        m_name = n;
+        parent.push(n.first);
+        m_name = n.second;
         if (p2.curr_is_identifier()) {
             m_ns = optional<name>(p2.get_name_val());
+            parent.push(p2.new_ast("ident", p2.pos(), *m_ns).m_id);
             p2.next();
         } else {
             m_ns = optional<name>();
+            parent.push(0);
         }
     }
 };

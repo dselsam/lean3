@@ -149,6 +149,8 @@ public:
     bool has_error_recovery() const { return m_error_recovery; }
 };
 
+typedef rb_map<unsigned, ast_id, unsigned_cmp> tag_ast_table;
+
 class parser : public abstract_parser, public parser_info {
     name_generator          m_ngen;
     bool                    m_use_exceptions;
@@ -159,9 +161,13 @@ class parser : public abstract_parser, public parser_info {
     bool                    m_imports_parsed;
     bool                    m_scanner_inited = false;
     parser_scope_stack      m_quote_stack;
-    pos_info                m_last_cmd_pos;
     unsigned                m_next_tag_idx;
+    ast_id                  m_next_ast_id = 1;
+    ast_id                  m_last_parsed_ast;
     pos_info_table          m_pos_table;
+    tag_ast_table           m_tag_ast_table;
+    std::vector<ast_data*>  m_ast;
+    std::vector<ast_id>     m_commands;
     // By default, when the parser finds a unknown identifier, it signs an error.
     // When the following flag is true, it creates a constant.
     // This flag is when we are trying to parse mutually recursive declarations.
@@ -183,10 +189,10 @@ class parser : public abstract_parser, public parser_info {
     tag get_tag(expr e);
 
     unsigned curr_level_lbp() const;
-    level parse_max_imax(bool is_max);
-    level parse_level_id();
-    level parse_level_nud();
-    level parse_level_led(level left);
+    pair<ast_id, level> parse_max_imax(bool is_max);
+    pair<ast_id, level> parse_level_id();
+    pair<ast_id, level> parse_level_nud();
+    pair<ast_id, level> parse_level_led(pair<ast_id, level> left);
 
     void parse_mod_doc_block();
 
@@ -199,18 +205,18 @@ class parser : public abstract_parser, public parser_info {
     expr parse_led_notation(expr left);
     expr parse_inaccessible();
     expr parse_placeholder();
-    expr parse_anonymous_var_pattern();
+    // expr parse_anonymous_var_pattern();
     expr parse_nud();
     bool curr_starts_expr();
     expr parse_numeral_expr(bool user_notation = true);
     expr parse_decimal_expr();
     expr parse_string_expr();
     expr parse_char_expr();
-    expr parse_inst_implicit_decl();
-    void parse_inst_implicit_decl(buffer<expr> & r);
+    pair<ast_id, expr> parse_inst_implicit_decl();
+    void parse_inst_implicit_decl(ast_data * parent, buffer<expr> & r);
     expr parse_binder_core(binder_info const & bi, unsigned rbp);
-    bool parse_binder_collection(buffer<pair<pos_info, name>> const & names, binder_info const & bi, buffer<expr> & r);
-    void parse_binder_block(buffer<expr> & r, binder_info const & bi, unsigned rbp, bool allow_default);
+    ast_id parse_binder_collection(buffer<pair<pos_info, name>> const & names, binder_info const & bi, buffer<expr> & r);
+    ast_id parse_binder_block(buffer<expr> & r, binder_info const & bi, unsigned rbp, bool allow_default);
     struct parse_binders_config {
         /* (input) If m_allow_empty is true, then parse_binders will succeed even if not binder is parsed. */
         bool     m_allow_empty{false};
@@ -259,17 +265,19 @@ class parser : public abstract_parser, public parser_info {
 
           The default is `RelaxedImplicit` */
         implicit_infer_kind * m_infer_kind{nullptr};
+        /* (output) The AST ID associated to the m_infer_kind */
+        ast_id * m_infer_kind_id{nullptr};
         /* (output) It is set to true if the last binder is surrounded
            with some kind of bracket (e.g., '()', '{}', '[]'). */
         bool     m_last_block_delimited{false};
         /* (output) If m_nentries != nullptr, then local notation declarations are stored here */
         buffer<notation_entry> * m_nentries{nullptr};
     };
-    void parse_binders_core(buffer<expr> & r, parse_binders_config & cfg);
-    local_environment parse_binders(buffer<expr> & r, parse_binders_config & cfg);
-    bool parse_local_notation_decl(buffer<notation_entry> * entries);
+    void parse_binders_core(ast_data * parent, buffer<expr> & r, parse_binders_config & cfg);
+    local_environment parse_binders(ast_data * parent, buffer<expr> & r, parse_binders_config & cfg);
+    ast_id parse_local_notation_decl(buffer<notation_entry> * entries);
 
-    pair<optional<name>, expr> parse_id_tk_expr(name const & tk, unsigned rbp);
+    std::tuple<ast_id, optional<name>, expr> parse_id_tk_expr(name const & tk, unsigned rbp);
 
     friend environment section_cmd(parser & p);
     friend environment namespace_cmd(parser & p);
@@ -299,6 +307,20 @@ public:
     ~parser();
 
     void init_scanner();
+
+    ast_data & new_ast(name type, pos_info start, name value = {});
+    void set_ast_pexpr(ast_id id, expr const & e);
+    void set_ast_expr(ast_id id, expr e);
+    ast_data & get_ast(ast_id id) { return *m_ast[id]; }
+    ast_id get_id(expr const & e) const;
+    ast_data & expr_ast(expr const & e) { return get_ast(get_id(e)); }
+    const char * ast_string(ast_id id) const { return m_ast[id]->m_value.get_string(); }
+    pos_info ast_pos(ast_id id) const { return m_ast[id]->m_start; }
+    void push_command(ast_id id) { m_commands.push_back(id); }
+    ast_id pop_command() { auto id = m_commands.back(); m_commands.pop_back(); return id; };
+    ast_data & new_modifiers(cmd_meta & meta);
+
+    void from_snapshot(snapshot const & snap);
 
     name next_name() { return m_ngen.next(); }
 
@@ -349,7 +371,9 @@ public:
     void erase_pos(expr const & e);
     pos_info pos_of(expr const & e, pos_info default_pos) const;
     pos_info pos_of(expr const & e) const { return pos_of(e, pos()); }
-    pos_info cmd_pos() const override { return m_last_cmd_pos; }
+    ast_id cmd_ast() const { lean_assert(!m_commands.empty()); return m_commands.back(); }
+    ast_data & cmd_ast_data() { return *m_ast[cmd_ast()]; }
+    pos_info cmd_pos() const override { return m_commands.empty() ? pos_info() : ast_pos(cmd_ast()); }
     name const & get_cmd_token() const { return m_cmd_token; }
 
     parser_pos_provider get_parser_pos_provider(pos_info const & some_pos) const override {
@@ -402,20 +426,20 @@ public:
     void check_token_or_id_next(name const & tk, char const * msg);
     /** \brief Check if the current token is an identifier, if it is return it and move to next token,
         otherwise throw an exception. */
-    name check_id_next(char const * msg, break_at_pos_exception::token_context ctxt =
+    pair<ast_id, name> check_id_next(char const * msg, break_at_pos_exception::token_context ctxt =
             break_at_pos_exception::token_context::none);
     void check_not_internal(name const & n, pos_info const & pos);
     /** \brief Similar to check_id_next, but also ensures the identifier is *not* an internal/reserved name. */
-    name check_decl_id_next(char const * msg, break_at_pos_exception::token_context ctxt =
+    pair<ast_id, name> check_decl_id_next(char const * msg, break_at_pos_exception::token_context ctxt =
             break_at_pos_exception::token_context::none);
     /** \brief Check if the current token is an atomic identifier, if it is, return it and move to next token,
         otherwise throw an exception. */
-    name check_atomic_id_next(char const * msg);
-    name check_atomic_decl_id_next(char const * msg);
+    pair<ast_id, name> check_atomic_id_next(char const * msg);
+    pair<ast_id, name> check_atomic_decl_id_next(char const * msg);
     list<name> to_constants(name const & id, char const * msg, pos_info const & p) const;
     name to_constant(name const & id, char const * msg, pos_info const & p);
     /** \brief Check if the current token is a constant, if it is, return it and move to next token, otherwise throw an exception. */
-    name check_constant_next(char const * msg);
+    pair<ast_id, name> check_constant_next(char const * msg);
 
     mpq const & get_num_val() const { return m_scanner.get_num_val(); }
     name const & get_name_val() const { return m_scanner.get_name_val(); }
@@ -424,59 +448,60 @@ public:
     std::string const & get_stream_name() const { return m_scanner.get_stream_name(); }
 
     unsigned get_small_nat();
-    virtual unsigned parse_small_nat() override final;
-    virtual std::string parse_string_lit() override final;
-    double parse_double();
+    virtual pair<ast_id, unsigned> parse_small_nat() override final;
+    virtual pair<ast_id, std::string> parse_string_lit() override final;
+    pair<ast_id, double> parse_double();
 
     /** \brief Parses a documentation block (`/-- TEXT -/`). For example, `/-- Doc\ndoc -/` returns " Doc\ndoc ". */
-    std::string parse_doc_block();
+    pair<ast_id, std::string> parse_doc_block();
 
-    bool parse_local_notation_decl() { return parse_local_notation_decl(nullptr); }
+    ast_id parse_local_notation_decl() { return parse_local_notation_decl(nullptr); }
 
-    level parse_level(unsigned rbp = 0);
+    pair<ast_id, level> parse_level(unsigned rbp = 0);
 
     expr parse_binder(unsigned rbp);
 
-    local_environment parse_binders(buffer<expr> & r, bool & last_block_delimited) {
+    local_environment parse_binders(ast_data * parent, buffer<expr> & r, bool & last_block_delimited) {
         parse_binders_config cfg;
-        auto new_env = parse_binders(r, cfg);
+        auto new_env = parse_binders(parent, r, cfg);
         last_block_delimited = cfg.m_last_block_delimited;
         return new_env;
     }
 
-    local_environment parse_binders(buffer<expr> & r, unsigned rbp, bool allow_default = false) {
+    local_environment parse_binders(ast_data * parent, buffer<expr> & r, unsigned rbp, bool allow_default = false) {
         parse_binders_config cfg;
         cfg.m_rbp           = rbp;
         cfg.m_allow_default = allow_default;
-        return parse_binders(r, cfg);
+        return parse_binders(parent, r, cfg);
     }
 
-    void parse_simple_binders(buffer<expr> & r, unsigned rbp) {
+    void parse_simple_binders(ast_data * parent, buffer<expr> & r, unsigned rbp) {
         parse_binders_config cfg;
         cfg.m_simple_only = true;
         cfg.m_rbp         = rbp;
-        parse_binders(r, cfg);
+        parse_binders(parent, r, cfg);
     }
 
-    local_environment parse_optional_binders(buffer<expr> & r, bool allow_default = false, bool explicit_delimiters = false) {
+    local_environment parse_optional_binders(ast_data * parent, buffer<expr> & r, bool allow_default = false, bool explicit_delimiters = false) {
         parse_binders_config cfg;
         cfg.m_allow_empty         = true;
         cfg.m_allow_default       = allow_default;
         cfg.m_explicit_delimiters = explicit_delimiters;
-        return parse_binders(r, cfg);
+        return parse_binders(parent, r, cfg);
     }
 
-    local_environment parse_optional_binders(buffer<expr> & r, implicit_infer_kind & kind) {
+    local_environment parse_optional_binders(ast_data * parent, buffer<expr> & r, ast_id & kind_id, implicit_infer_kind & kind) {
         parse_binders_config cfg;
         cfg.m_allow_empty   = true;
         cfg.m_infer_kind    = &kind;
-        return parse_binders(r, cfg);
+        cfg.m_infer_kind_id = &kind_id;
+        return parse_binders(parent, r, cfg);
     }
 
-    local_environment parse_binders(buffer<expr> & r, buffer<notation_entry> & nentries) {
+    local_environment parse_binders(ast_data * parent, buffer<expr> & r, buffer<notation_entry> & nentries) {
         parse_binders_config cfg;
         cfg.m_nentries = &nentries;
-        return parse_binders(r, cfg);
+        return parse_binders(parent, r, cfg);
     }
 
     optional<binder_info> parse_optional_binder_info(bool simple_only = false);
@@ -486,7 +511,8 @@ public:
     void parse_close_binder_info(binder_info const & bi) { return parse_close_binder_info(optional<binder_info>(bi)); }
 
     /** \brief Convert an identifier into an expression (constant or local constant) based on the current scope */
-    expr id_to_expr(name const & id, pos_info const & p, bool resolve_only = false, bool allow_field_notation = true,
+    expr id_to_expr(name const & id, ast_data & data,
+                    bool resolve_only = false, bool allow_field_notation = true,
                     list<name> const & extra_locals = list<name>());
 
     /** Always parses an expression.  Returns a synthetic sorry even if no input is consumed. */
@@ -499,10 +525,10 @@ public:
     /** \brief Parse an (optionally) qualified expression.
         If the input is of the form <id> : <expr>, then return the pair (some(id), expr).
         Otherwise, parse the next expression and return (none, expr). */
-    pair<optional<name>, expr> parse_qualified_expr(unsigned rbp = 0);
+    std::tuple<ast_id, optional<name>, expr> parse_qualified_expr(unsigned rbp = 0);
     /** \brief If the input is of the form <id> := <expr>, then return the pair (some(id), expr).
         Otherwise, parse the next expression and return (none, expr). */
-    pair<optional<name>, expr> parse_optional_assignment(unsigned rbp = 0);
+    std::tuple<ast_id, optional<name>, expr> parse_optional_assignment(unsigned rbp = 0);
 
     /** \brief Parse a pattern or expression */
     expr parse_pattern_or_expr(unsigned rbp = 0);
@@ -553,7 +579,7 @@ public:
     bool in_quote() const { return m_in_quote; }
 
     void maybe_throw_error(parser_error && err) override;
-    level parser_error_or_level(parser_error && err);
+    pair<ast_id, level> parser_error_or_level(parser_error && err);
     expr parser_error_or_expr(parser_error && err);
     void throw_invalid_open_binder(pos_info const & pos);
 

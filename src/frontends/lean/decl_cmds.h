@@ -14,7 +14,7 @@ class parser;
     Store the result in \c ps.
 
     Return true when levels were provided. */
-bool parse_univ_params(parser & p, buffer<name> & ps);
+ast_id parse_univ_params(parser & p, buffer<name> & ps);
 
 /** \brief Add universe levels from \c found_ls to \c ls_buffer
     (only the levels that do not already occur in \c ls_buffer are added).

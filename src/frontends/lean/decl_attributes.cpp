@@ -5,6 +5,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Leonardo de Moura
 */
 #include "util/sexpr/option_declarations.h"
+#include "util/task_builder.h"
 #include "library/attribute_manager.h"
 #include "library/constants.h"
 #include "library/class.h"
@@ -26,32 +27,46 @@ unsigned get_default_priority(options const & opts) {
 }
 // ==========================================
 
-void decl_attributes::parse_core(parser & p, bool compact) {
+ast_id decl_attributes::parse_core(parser & p, bool compact) {
+    auto& attrs = p.new_ast("attrs", p.pos());
     while (true) {
         auto pos = p.pos();
+        auto& attr_ast = p.new_ast("attr", pos);
+        attrs.push(attr_ast.m_id);
         bool deleted = p.curr_is_token_or_id(get_sub_tk());
         if (deleted) {
+            attr_ast.push(p.new_ast(get_sub_tk(), pos).m_id);
             if (m_persistent)
                 throw parser_error("cannot remove attribute globally (solution: use 'local attribute')", pos);
             p.next();
+        } else {
+            attr_ast.push(0);
         }
+
         p.check_break_before(break_at_pos_exception::token_context::attribute);
         name id;
+        auto& idast = p.new_ast("attrid", p.pos());
+        attr_ast.push(idast.m_id);
         if (p.curr_is_command()) {
             id = p.get_token_info().value();
             p.next();
         } else {
             id = p.check_id_next("invalid attribute declaration, identifier expected",
-                                 break_at_pos_exception::token_context::attribute);
+                                 break_at_pos_exception::token_context::attribute).second;
         }
+        idast.m_value = id;
         if (id == "priority") {
             if (deleted)
                 throw parser_error("cannot remove priority attribute", pos);
             auto pos = p.pos();
             expr pre_val = p.parse_expr();
-            pre_val = mk_typed_expr(mk_constant(get_nat_name()), pre_val);
+            pre_val = mk_typed_expr(mk_constant(get_nat_name()), pre_val, pre_val.get_tag());
+            ast_id id = p.get_id(pre_val);
+            p.set_ast_pexpr(id, pre_val);
+            attr_ast.push(id);
             expr nat = mk_constant(get_nat_name());
             expr val = p.elaborate("_attribute", list<expr>(), pre_val).first;
+            p.get_ast(id).m_expr.emplace(mk_pure_task(std::move(val)));
             vm_obj prio = eval_closed_expr(p.env(), p.get_options(), "_attribute", nat, val, pos);
             if (optional<unsigned> _prio = try_to_unsigned(prio)) {
                 m_prio = _prio;
@@ -73,7 +88,7 @@ void decl_attributes::parse_core(parser & p, bool compact) {
                     }
                 }
             }
-            auto data = deleted ? attr_data_ptr() : attr.parse_data(p);
+            auto data = deleted ? attr_data_ptr() : attr.parse_data(p, attr_ast);
             m_entries = cons({&attr, data}, m_entries);
             if (id == "parsing_only")
                 m_parsing_only = true;
@@ -90,17 +105,18 @@ void decl_attributes::parse_core(parser & p, bool compact) {
                 break;
         }
     }
+    return attrs.m_id;
 }
 
-void decl_attributes::parse(parser & p) {
+ast_id decl_attributes::parse(parser & p) {
     if (!p.curr_is_token(get_lbracket_tk()))
-        return;
+        return 0;
     p.next();
-    parse_core(p, false);
+    return parse_core(p, false);
 }
 
-void decl_attributes::parse_compact(parser & p) {
-    parse_core(p, true);
+ast_id decl_attributes::parse_compact(parser & p) {
+    return parse_core(p, true);
 }
 
 void decl_attributes::set_attribute(environment const & env, name const & attr_name) {
