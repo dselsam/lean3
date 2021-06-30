@@ -45,7 +45,7 @@ public:
     virtual optional<expr> expand(expr const &, abstract_type_context &) const override {
         return none_expr();
     }
-    virtual unsigned trust_level() const override { return 0; }
+    virtual unsigned trust_level() const override { return 2; }
     virtual bool operator==(macro_definition_cell const & other) const override {
         delayed_abstraction_macro const * other_ptr = dynamic_cast<delayed_abstraction_macro const *>(&other);
         return other_ptr && m_value == other_ptr->m_value;

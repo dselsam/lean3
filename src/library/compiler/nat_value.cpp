@@ -53,7 +53,7 @@ public:
         return optional<expr>(r);
     }
 
-    virtual unsigned trust_level() const override { return 0; }
+    virtual unsigned trust_level() const override { return 2; }
     virtual bool operator==(macro_definition_cell const & other) const override {
         nat_value_macro const * other_ptr = dynamic_cast<nat_value_macro const *>(&other);
         return other_ptr && m_value == other_ptr->m_value;

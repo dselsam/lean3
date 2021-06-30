@@ -316,7 +316,7 @@ void expr_let::dealloc(buffer<expr_cell*> & todelete) {
 // Macro definition
 bool macro_definition_cell::lt(macro_definition_cell const &) const { return false; }
 bool macro_definition_cell::operator==(macro_definition_cell const & other) const { return typeid(*this) == typeid(other); }
-unsigned macro_definition_cell::trust_level() const { return 0; }
+unsigned macro_definition_cell::trust_level() const { return 2; }
 
 void macro_definition_cell::display(std::ostream & out) const { out << get_name(); }
 unsigned macro_definition_cell::hash() const { return get_name().hash(); }

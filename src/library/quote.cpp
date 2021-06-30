@@ -46,7 +46,7 @@ public:
     virtual optional<expr> expand(expr const &, abstract_type_context &) const override {
         return optional<expr>();
     }
-    virtual unsigned trust_level() const override { return 0; }
+    virtual unsigned trust_level() const override { return 2; }
     virtual bool operator==(macro_definition_cell const & other) const override {
         /* Hack: we do *not* compare m_value's because quoted expressions may contain
            relevant position information that is ignored by the equality predicate for expressions.

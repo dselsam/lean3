@@ -27,7 +27,7 @@ public:
 
     virtual name get_name() const override { return *g_sorry_name; }
 
-    unsigned int trust_level() const override { return 1; }
+    unsigned int trust_level() const override { return 2; }
 
     virtual expr check_type(expr const & sry, abstract_type_context & ctx, bool infer_only) const override {
         if (!is_sorry(sry)) throw exception("invalid sorry macro");

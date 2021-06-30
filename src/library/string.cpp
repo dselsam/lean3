@@ -98,7 +98,7 @@ public:
     virtual optional<expr> expand(expr const &, abstract_type_context &) const {
         return some_expr(from_string_core(m_value));
     }
-    virtual unsigned trust_level() const { return 0; }
+    virtual unsigned trust_level() const { return 2; }
     virtual bool operator==(macro_definition_cell const & other) const {
         string_macro const * other_ptr = dynamic_cast<string_macro const *>(&other);
         return other_ptr && m_value == other_ptr->m_value;

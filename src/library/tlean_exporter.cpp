@@ -158,14 +158,21 @@ unsigned tlean_exporter::export_expr_core(expr const & e) {
     case expr_kind::Local:
         throw exception("invalid 'export', local constants cannot be exported");
     case expr_kind::Macro:
-        throw exception("invalid 'export', macros cannot be exported");
+        // TODO: assert this is a projection
+      unsigned j = export_expr_core(macro_arg(e, 0));
+      i = static_cast<unsigned>(m_expr2idx.size());
+      m_out << i << " ";
+      macro_def(e).textualize(*this);
+      m_out << " " << j << "\n";
     }
     m_expr2idx[e] = i;
     return i;
 }
 
 unsigned tlean_exporter::export_expr(expr const & e) {
-    return export_expr_core(unfold_all_macros(m_env, e));
+    optional<unsigned> trust_lvl(1);
+    return export_expr_core(unfold_untrusted_macros(m_env, e, trust_lvl));
+    // return export_expr_core(unfold_all_macros(m_env, e));
 }
 
 void tlean_exporter::export_definition(declaration const & d) {
